@@ -169,13 +169,17 @@
   document.querySelectorAll('.suggestion').forEach(button => {
     button.addEventListener('click', () => {
       questionInput.value = button.dataset.question || '';
-      if (button.dataset.translation) {
-        translationMode.value = button.dataset.translation;
-        language.value = button.dataset.translation;
+      translationMode.value = button.dataset.translation || 'none';
+      language.value = button.dataset.language || 'auto';
+      // A sample question is a one-click test. When access is protected,
+      // keep the selected question and focus the password field instead.
+      if (password && !password.value.trim()) {
+        password.focus();
+      } else if (!sendButton.disabled) {
+        form.requestSubmit();
       } else {
-        translationMode.value = 'none'; language.value = 'auto';
+        questionInput.focus();
       }
-      questionInput.focus();
     });
   });
 })();

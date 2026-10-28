@@ -28,7 +28,7 @@
     <section class="book-intro" aria-label="Textbook and original author">
       <div class="book-summary">
         <p class="eyebrow">TEXTBOOK COMPANION <span aria-hidden="true">/</span> OPPIKIRJAN OPPIMISAVUSTAJA</p>
-        <h1>Kyselytutkimuksen mittarit ja menetelmät</h1>
+        <h1>Kyselytutkimuksen <span class="title-accent">mittarit ja menetelmät</span></h1>
         <p class="author-line">Author / Kirjoittaja: <strong>Kimmo Vehkalahti</strong></p>
         <p class="book-subtitle">Ask questions in Finnish or English, find relevant pages, and translate passages from the book.</p>
         <div class="book-actions">
@@ -77,12 +77,22 @@
         </div>
         <div class="chat-messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text">
           <div class="welcome" id="welcome">
-            <h3>What would you like to know?</h3>
-            <p>Ask about a concept, locate a section, or translate a passage.</p>
-            <div class="suggestions" aria-label="Sample questions">
-              <button class="suggestion" type="button" data-question="Mitä kirjassa sanotaan validiteetista ja reliabiliteetista?">Validiteetti ja reliabiliteetti <span aria-hidden="true">↗</span></button>
-              <button class="suggestion" type="button" data-question="Explain factor analysis in the book and tell me which pages to read.">Explain factor analysis <span aria-hidden="true">↗</span></button>
-              <button class="suggestion" type="button" data-question="Translate page 41 of the textbook into English." data-translation="en">Translate page 41 <span aria-hidden="true">↗</span></button>
+            <p class="welcome-kicker">GET STARTED <span aria-hidden="true">/</span> ALOITA TÄSTÄ</p>
+            <h3>Explore the textbook</h3>
+            <p>Choose a question to send, or write your own below.</p>
+            <div class="suggestions" aria-label="Four example questions: two Finnish and two English">
+              <button class="suggestion" type="button" data-language="fi" data-question="Miten validiteetti ja reliabiliteetti eroavat toisistaan? Kerro myös, miltä kirjan sivuilta ne löytyvät.">
+                <span class="suggestion-lang">FI</span><span class="suggestion-copy">Miten validiteetti ja reliabiliteetti eroavat toisistaan?</span><span class="suggestion-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="suggestion" type="button" data-language="fi" data-question="Miten kirjassa käsitellään faktorianalyysin käyttöä kyselyaineiston tiivistämisessä? Viittaa olennaisiin sivuihin.">
+                <span class="suggestion-lang">FI</span><span class="suggestion-copy">Miten faktorianalyysiä käytetään kyselyaineiston tiivistämiseen?</span><span class="suggestion-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="suggestion" type="button" data-language="en" data-question="What is the difference between open-ended and closed-ended questionnaire items? Refer to the relevant pages in the book.">
+                <span class="suggestion-lang">EN</span><span class="suggestion-copy">What is the difference between open-ended and closed-ended questions?</span><span class="suggestion-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="suggestion" type="button" data-language="en" data-translation="en" data-question="Translate into English the book's explanation of operationalising concepts in Section 2.1, page 18. Include a link to the original page.">
+                <span class="suggestion-lang">EN</span><span class="suggestion-copy">Translate the explanation of operationalising concepts on page 18.</span><span class="suggestion-arrow" aria-hidden="true">↗</span>
+              </button>
             </div>
           </div>
         </div>

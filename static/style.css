@@ -1,4 +1,4 @@
-/* KyselyTutor — white-dominant design, dark type and restrained Helsinki-blue accents.
+/* KyselyTutor — white-dominant editorial design, black type and clearer Helsinki-inspired blue highlights.
    University of Helsinki colour guidance: https://www.helsinki.fi/en/brand-book/colours
    Blue reference: https://universityofhelsinki.github.io/Styleguide/  */
 :root {
@@ -180,4 +180,149 @@ textarea:focus-visible { outline: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+}
+
+
+/* 2026 Helsinki homepage-inspired refinement. Independent adaptation, not an
+   official University of Helsinki website. Blue is used more visibly in
+   navigation and interaction; white remains the dominant surface. */
+:root {
+  --blue: #087da7;
+  --blue-hover: #075c80;
+  --blue-dark: #00658d;
+  --blue-tint: #eaf5fa;
+  --blue-border: #8ac4db;
+}
+.masthead {
+  border-top: 5px solid var(--blue);
+  min-height: 80px;
+}
+.brand-mark {
+  background: var(--blue-dark);
+  color: #fff;
+  border-color: var(--blue-dark);
+  border-radius: 1px;
+}
+.brand-mark-dot { color: #fff; }
+.book-intro {
+  position: relative;
+  padding-top: 39px;
+  padding-bottom: 37px;
+}
+.book-summary {
+  border-left: 5px solid var(--blue);
+  padding-left: 25px;
+}
+.eyebrow { color: var(--blue-dark); letter-spacing: .11em; }
+.title-accent {
+  text-decoration-line: underline;
+  text-decoration-color: var(--blue);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 9px;
+}
+.author-line strong {
+  border-bottom: 2px solid var(--blue);
+  padding-bottom: 2px;
+}
+.pdf-link { background: var(--blue-dark); border-radius: 3px; box-shadow: 0 3px 0 #064c6c; }
+.pdf-link:hover { background: var(--blue-hover); box-shadow: 0 3px 0 #043a51; }
+.toc-toggle {
+  border: 1.5px solid var(--blue);
+  color: var(--blue-dark);
+  border-radius: 4px;
+}
+.toc-toggle[aria-expanded="true"] { background: var(--blue-tint); }
+.toc-toggle:hover { background: #dceff7; }
+.sidebar { border-radius: 4px; border-top: 4px solid var(--blue); }
+.contents-heading { padding-top: 18px; }
+.contents-heading h2 { color: var(--blue-dark); }
+.chapter { border-left: 3px solid transparent; padding-left: 8px; }
+.chapter:hover { border-left-color: var(--blue); }
+.chapter-no {
+  display: inline-block;
+  text-align: center;
+  min-height: 24px;
+  padding: 1px 3px;
+  background: var(--blue-tint);
+  border-radius: 2px;
+}
+.chat-panel { border-radius: 4px; border-top: 4px solid var(--blue); }
+.chat-heading { padding-top: 18px; }
+.chat-heading h2 { letter-spacing: -.6px; }
+.chat-messages { min-height: 395px; }
+.welcome { max-width: 790px; width: 100%; align-self: center; padding: 30px 0 45px; text-align: left; }
+.welcome-kicker {
+  margin: 0 0 7px !important;
+  font-size: 12px !important;
+  letter-spacing: .105em;
+  color: var(--blue-dark) !important;
+  font-weight: 800;
+}
+.welcome-kicker span { color: #7898a8; padding: 0 3px; }
+.welcome h3 { font-size: 29px; margin-bottom: 6px; }
+.welcome > p:not(.welcome-kicker) { font-size: 16px; margin-bottom: 25px; }
+.suggestions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: none;
+  width: 100%;
+}
+.suggestion {
+  display: flex;
+  min-height: 94px;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  border: 1px solid #c9dae2;
+  border-left: 4px solid var(--blue);
+  border-radius: 3px;
+  background: #fff;
+  padding: 16px 13px 14px 15px;
+  line-height: 1.4;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: background .12s ease, border-color .12s ease;
+}
+.suggestion:hover { background: var(--blue-tint); border-color: var(--blue); }
+.suggestion-lang {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 31px;
+  min-height: 27px;
+  padding: 3px 5px;
+  border-radius: 2px;
+  background: var(--blue-tint);
+  color: var(--blue-dark) !important;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.suggestion-copy { display: block; flex: 1 1 auto; }
+.suggestion-arrow { align-self: flex-end; font-size: 17px; color: var(--blue-dark) !important; }
+.message.bot { border-left: 3px solid #b7d7e4; }
+.message.user { background: #eaf5fa; }
+.composer { border-top: 2px solid #c0deea; }
+.input-row:focus-within { box-shadow: 0 0 0 3px #087da71a; }
+#send { background: var(--blue-dark); border-radius: 3px; }
+#send:hover { background: var(--blue-hover); }
+.page-link { border-color: var(--blue-border); }
+@media (max-width: 760px) {
+  .book-intro { padding: 29px 0 27px; }
+  .book-summary { padding-left: 16px; border-left-width: 4px; }
+  .title-accent { text-decoration-thickness: 3px; text-underline-offset: 6px; }
+  .chat-messages { min-height: 350px; }
+  .welcome { padding: 24px 0 30px; }
+  .suggestions { grid-template-columns: 1fr; gap: 9px; }
+  .suggestion { min-height: 74px; padding: 12px; font-size: 15px; }
+}
+@media (max-width: 530px) {
+  .masthead { min-height: 67px; }
+  .welcome h3 { font-size: 25px; }
+  .welcome > p:not(.welcome-kicker) { font-size: 15px; }
+  .suggestion { min-height: 72px; }
 }
