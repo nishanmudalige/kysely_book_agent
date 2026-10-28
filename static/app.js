@@ -10,6 +10,31 @@
   const clear = document.getElementById('clear');
   const welcome = document.getElementById('welcome');
   const history = [];
+  const tocToggle = document.getElementById('toc-toggle');
+  const tocLabel = document.getElementById('toc-toggle-label');
+  const tocPanel = document.getElementById('contents-panel');
+  const grid = document.getElementById('main-grid');
+  const TOC_STORAGE_KEY = 'kyselytutor_contents_open_v2';
+
+  function setContentsVisible(open, persist = true) {
+    if (!tocPanel || !tocToggle || !grid) return;
+    tocPanel.hidden = !open;
+    grid.classList.toggle('contents-hidden', !open);
+    tocToggle.setAttribute('aria-expanded', String(open));
+    if (tocLabel) tocLabel.textContent = open ? 'Hide contents' : 'Show contents';
+    if (persist) {
+      try { localStorage.setItem(TOC_STORAGE_KEY, open ? 'yes' : 'no'); } catch (_) {}
+    }
+  }
+  if (tocToggle && tocPanel) {
+    let saved = null;
+    try { saved = localStorage.getItem(TOC_STORAGE_KEY); } catch (_) {}
+    const defaultOpen = !window.matchMedia('(max-width: 760px)').matches;
+    setContentsVisible(saved === null ? defaultOpen : saved === 'yes', false);
+    tocToggle.addEventListener('click', () => {
+      setContentsVisible(tocPanel.hidden);
+    });
+  }
 
   const CATEGORY = {
     book: {en: 'From the textbook', fi: 'Kirjasta', css: ''},
