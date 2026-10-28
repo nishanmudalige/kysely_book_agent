@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KyselyTutor — independent Finnish–English study helper for Kimmo Vehkalahti's Kyselytutkimuksen mittarit ja menetelmät, powered by Claude.">
+  <title>KyselyTutor · Kimmo Vehkalahti's textbook</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.4.15/dist/purify.min.js"></script>
+  <script>
+    window.MathJax = { tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}, svg: {fontCache: 'global'} };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body data-password-required="{{ '1' if needs_password else '0' }}">
+  <div class="page-shell">
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="KyselyTutor home">
+        <span class="brand-icon" aria-hidden="true">K</span>
+        <span>Kysely<span class="brand-light">Tutor</span></span>
+      </a>
+      <div class="powered">Powered by Claude <span aria-hidden="true">·</span> Finnish + English</div>
+    </header>
+
+    <section class="hero" aria-label="Textbook introduction">
+      <div class="hero-main">
+        <p class="eyebrow">INDEPENDENT TEXTBOOK STUDY ASSISTANT <span aria-hidden="true">/</span> OPPIKIRJAN OPPIMISAVUSTAJA</p>
+        <h1>Kyselytutkimuksen<br>mittarit ja menetelmät</h1>
+        <div class="authorline">Written by <strong>Kimmo Vehkalahti</strong> <span class="sep">·</span> Kirjoittanut <strong>Kimmo Vehkalahti</strong></div>
+        <p class="hero-description">Ask about concepts, find pages, and translate Finnish passages into English. You can also ask in Finnish and receive answers in either language.</p>
+        <p class="hero-description fi">Kysy kirjasta suomeksi tai englanniksi, etsi oikeat sivut ja käännä kirjan tekstiä englanniksi.</p>
+        <div class="hero-actions">
+          <a class="pdf-button" href="/book.pdf" target="_blank" rel="noopener noreferrer">↗ &nbsp; Open the textbook PDF <span class="subbutton">/ Avaa PDF</span></a>
+          <span class="edition">University of Helsinki PDF · 2019 · 223 pages</span>
+        </div>
+      </div>
+      <div class="book-cover" aria-hidden="true">
+        <div class="cover-author">KIMMO VEHKALAHTI</div>
+        <div class="cover-title">Kyselytutkimuksen<br>mittarit ja<br>menetelmät</div>
+        <div class="cover-lines"><i></i><i></i><i></i></div>
+        <div class="cover-year">2019</div>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <aside class="sidebar">
+        <section class="panel how-to">
+          <h2>What this tutor can do</h2>
+          <p class="muted">Mitä avustaja osaa tehdä</p>
+          <div class="feature"><span class="feature-icon">01</span><span>Explain concepts directly from the book, with linked page references.</span></div>
+          <div class="feature"><span class="feature-icon">02</span><span>Translate book passages from Finnish to English.</span></div>
+          <div class="feature"><span class="feature-icon">03</span><span>Clearly label information <strong>not contained in the book</strong>.</span></div>
+          <div class="feature"><span class="feature-icon">04</span><span>Identify questions <strong>outside the book's scope</strong>.</span></div>
+        </section>
+
+        <section class="panel chapters">
+          <h2>Explore the book <span class="small-muted">/ Sisällys</span></h2>
+          <nav aria-label="Book chapters">
+            {% for chapter in chapters %}
+              <a class="chapter" href="/book.pdf#page={{ chapter.page }}" target="_blank" rel="noopener noreferrer">
+                <span class="chapter-no">{{ chapter.number }}</span>
+                <span><strong>{{ chapter.fi }}</strong><small>{{ chapter.en }}</small></span>
+                <span class="page-no">{{ chapter.page }}</span>
+              </a>
+            {% endfor %}
+          </nav>
+          <div class="chapter-note">Page numbers open the corresponding pages in the original PDF.</div>
+        </section>
+
+        <section class="attribution">
+          <h2>About the original work</h2>
+          <p>Original author and copyright holder: <strong>Kimmo Vehkalahti</strong>.</p>
+          <p><em>Kyselytutkimuksen mittarit ja menetelmät</em>, Finn Lectura print edition (2014); open-access PDF published by the University of Helsinki (2019).</p>
+          <p><a href="https://doi.org/10.31885/9789515149817" target="_blank" rel="noopener noreferrer">Original publication / DOI</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0 licence</a></p>
+          <p class="fine-print">KyselyTutor is an independent AI tool. It was not written or endorsed by the original author or the publisher. Translations and explanations are AI-generated, not an official English edition.</p>
+        </section>
+      </aside>
+
+      <main class="chat-panel" aria-label="Chat with KyselyTutor">
+        <div class="chat-heading">
+          <div>
+            <div class="chat-heading-eyebrow">BOOK COMPANION <span class="pulse" aria-hidden="true"></span></div>
+            <h2>Ask KyselyTutor</h2>
+            <p>Kysy kysymys · Ask in Finnish or English</p>
+          </div>
+          <button class="clear-button" id="clear" type="button" title="Start a new conversation">↺ &nbsp; New chat</button>
+        </div>
+        <div class="chat-messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text">
+          <div class="welcome" id="welcome">
+            <div class="welcome-symbol">“</div>
+            <h3>What would you like to understand?</h3>
+            <p>Choose a starting question, or write your own below.</p>
+            <div class="suggestions">
+              <button class="suggestion" type="button" data-question="Mitä kirjassa sanotaan validiteetista ja reliabiliteetista?">Mitä tarkoittavat validiteetti ja reliabiliteetti? <span>↗</span></button>
+              <button class="suggestion" type="button" data-question="Explain factor analysis in the book and tell me which pages to read.">Explain factor analysis and find the relevant pages <span>↗</span></button>
+              <button class="suggestion" type="button" data-question="Translate page 41 of the textbook into English." data-translation="en">Translate book page 41 into English <span>↗</span></button>
+              <button class="suggestion" type="button" data-question="Does the book explain modern online survey platforms such as Qualtrics?">Does the book cover modern online survey tools? <span>↗</span></button>
+            </div>
+          </div>
+        </div>
+        <form class="composer" id="ask-form">
+          <div class="settings-row">
+            <label>Reply language <span>/ Vastauskieli</span>
+              <select id="language">
+                <option value="auto">Automatic / Automaattinen</option>
+                <option value="en">English</option>
+                <option value="fi">Suomi</option>
+              </select>
+            </label>
+            <label>Mode <span>/ Tila</span>
+              <select id="translation-mode">
+                <option value="none">Ask about the book / Kysy kirjasta</option>
+                <option value="en">Translate book text → English</option>
+                <option value="fi">Translate selected text → Finnish</option>
+              </select>
+            </label>
+          </div>
+          {% if needs_password %}
+          <div class="password-row"><label for="password">Access code / Pääsykoodi</label><input id="password" type="password" autocomplete="off" placeholder="Enter the private chat access code" required></div>
+          {% endif %}
+          <div class="input-row">
+            <label for="question" class="sr-only">Ask a question in Finnish or English</label>
+            <textarea id="question" rows="3" maxlength="2500" required placeholder="Ask a question in Finnish or English…&#10;Kysy suomeksi tai englanniksi…"></textarea>
+            <button id="send" type="submit" aria-label="Send question"><span>Send</span><span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="composer-footnote"><span>Enter to send · Shift+Enter for a new line</span><span><strong>Book sources are linked</strong> to the PDF.</span></div>
+        </form>
+      </main>
+    </div>
+
+    <footer>Created as an independent study aid for <em>Kyselytutkimuksen mittarit ja menetelmät</em> by Kimmo Vehkalahti. Original text © Kimmo Vehkalahti, CC BY 4.0.</footer>
+  </div>
+</body>
+</html>
