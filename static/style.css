@@ -456,3 +456,7 @@ html[data-theme="dark"] .welcome-kicker span { color: #93b9ca; }
   .suggestions { grid-auto-columns: minmax(225px, 78%); gap: 9px; }
   .suggestion { min-height: 115px; font-size: 14px; }
 }
+
+/* Make chat listening available alongside New chat without clutter. */
+.chat-heading-actions {display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:580px) {.chat-heading-actions {width:100%;justify-content:flex-start}.chat-heading-actions .speech-launch {font-size:13px;padding:7px 10px}}

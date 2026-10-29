@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='reader.css') }}">
   <script defer src="{{ url_for('static', filename='reader.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='speech.css') }}">
+  <script defer src="{{ url_for('static', filename='speech.js') }}"></script>
 </head>
 <body class="reader-body" data-page-count="{{ pdf_pages }}">
   <div class="reader-shell">
@@ -75,7 +77,7 @@
         </div>
       </aside>
       <main class="reader-main" id="reader-main" aria-label="Book pages">
-        <div class="reader-paper-meta"><span id="reader-status" role="status" aria-live="polite">Opening the textbook…</span><div class="reader-page-actions"><button type="button" id="reader-highlight-toggle" class="reader-highlight-toggle" aria-pressed="true" hidden><span id="reader-highlight-label">Hide highlights</span></button><button type="button" id="reader-text-toggle" aria-pressed="false">Show page text</button><button type="button" id="reader-copy" title="Copy a direct link to this page">Copy page link</button></div></div>
+        <div class="reader-paper-meta"><span id="reader-status" role="status" aria-live="polite">Opening the textbook…</span><div class="reader-page-actions"><button class="speech-launch reader-speak-evidence" type="button" id="reader-read-highlights" hidden title="Read the orange highlighted source passages aloud">▶ Read highlighted text</button><button type="button" id="reader-highlight-toggle" class="reader-highlight-toggle" aria-pressed="true" hidden><span id="reader-highlight-label">Hide highlights</span></button><button class="speech-launch" id="speech-trigger" type="button" aria-expanded="false" aria-controls="speech-player" title="Read selected text or this page aloud">▶ Read aloud</button><button type="button" id="reader-text-toggle" aria-pressed="false">Show page text</button><button type="button" id="reader-copy" title="Copy a direct link to this page">Copy page link</button></div></div>
         <p id="reader-highlight-note" class="reader-highlight-note" hidden>Orange highlights mark related original Finnish passages supporting the answer (not necessarily exact quotations). <span>/ Oranssi korostaa vastaukseen liittyviä alkuperäisiä suomenkielisiä tekstikohtia.</span></p>
         <div id="reader-scroller" class="reader-scroller">
           <div class="reader-image-frame" id="reader-image-frame">
@@ -84,13 +86,31 @@
           </div>
           <div class="reader-page-text" id="reader-page-text" hidden>
             <div class="reader-text-heading"><strong>Extracted page text <span>/ Sivun teksti</span></strong><button type="button" id="reader-copy-text">Copy text</button></div>
-            <pre id="reader-text-content"></pre>
+            <pre id="reader-text-content" lang="fi" tabindex="0"></pre>
           </div>
         </div>
-        <p class="reader-help">Tip: Use the ← → arrow keys for pages. Text view lets you select and copy Finnish text. Page links always open the reader, not a PDF plugin.</p>
+        <p class="reader-help">Tip: Select words in <strong>Show page text</strong>, then click <strong>Read selection</strong> to hear them. Use <strong>Read aloud</strong> to listen to the whole page. ← → change pages.</p>
       </main>
     </div>
     <footer class="reader-footer">The original textbook is © <strong>Kimmo Vehkalahti</strong> and published under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. This independently developed tutor and reader are not endorsed by the author or the University of Helsinki. <a href="https://doi.org/10.31885/9789515149817" target="_blank" rel="noopener noreferrer">Book DOI</a>.</footer>
   </div>
+
+  <!-- Shared read-aloud player: only appears after a user asks to listen. -->
+  <button id="speech-selection-action" class="speech-selection-action" type="button" hidden>▶ Read selection / Lue valittu</button>
+  <section id="speech-player" class="speech-player" role="region" aria-label="Read-aloud player / Ääneenluku" hidden>
+    <div class="speech-head"><strong>Listen / Kuuntele</strong><span class="speech-detected" id="speech-detected">Detecting language automatically</span><button class="speech-close" id="speech-close" type="button" title="Close and stop audio" aria-label="Close and stop audio">×</button></div>
+    <p class="speech-preview" id="speech-preview">Select text to listen in Finnish or English.</p>
+    <div class="speech-controls" role="group" aria-label="Audio playback controls">
+      <button class="speech-control" id="speech-restart" type="button" title="Rewind to beginning / Alkuun" aria-label="Rewind to beginning">⏮</button>
+      <button class="speech-control" id="speech-back" type="button" title="Previous sentence / Edellinen virke" aria-label="Previous sentence">⏪</button>
+      <button class="speech-control primary" id="speech-play" type="button" title="Play or resume / Toista tai jatka" aria-label="Play or resume">▶</button>
+      <button class="speech-control" id="speech-pause" type="button" title="Pause / Tauko" aria-label="Pause">⏸</button>
+      <button class="speech-control" id="speech-next" type="button" title="Next sentence / Seuraava virke" aria-label="Next sentence">⏩</button>
+      <button class="speech-control" id="speech-stop" type="button" title="Stop / Pysäytä" aria-label="Stop">⏹</button>
+      <span class="speech-progress" id="speech-progress" aria-live="polite">Ready</span>
+    </div>
+    <div class="speech-options"><label for="speech-rate">Speed</label><select id="speech-rate"><option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option><option value="1.5">1.5×</option></select><label for="speech-voice">Voice</label><select id="speech-voice"><option value="">Automatic — best available</option></select></div>
+    <p id="speech-notice" class="speech-notice" role="status">Uses the Finnish and English voices available in your browser.</p>
+  </section>
 </body>
 </html>

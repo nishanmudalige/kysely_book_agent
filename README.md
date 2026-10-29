@@ -8,6 +8,15 @@
 
 KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and translate, and optionally **Claude Haiku 5.5** to generate Finnish search keywords from English questions. It is deliberately modeled on the earlier `tilasto_book_agent_claude.zip` project: Flask, a Render deployment option, local searchable PDF text, clickable book citations, and a bilingual interface.
 
+## Read aloud / Ääneenluku (Finnish and English)
+
+- In **Claude answers**, select a phrase or paragraph with the mouse or keyboard and use the floating **Read selection / Lue valittu** action. Alternatively, select **Read aloud** in the chat heading to hear the most recent answer.
+- In the **HTML textbook reader**, select **Show page text** to select and listen to an excerpt from the original Finnish text. **Read aloud** reads the whole current page. A citation displaying orange evidence highlights also provides **Read highlighted text** to speak the related Finnish passages directly.
+- The compact player has **Play / Resume, Pause, Rewind to beginning, Previous sentence, Next sentence, Stop**, and **Speed (0.8×–1.5×)**, plus a list of installed voices. The player opens only when requested and works with dark mode/mobile layouts.
+- Speech automatically detects **Finnish vs English** (including sentence by sentence). It favours enhanced/natural voices exposed by the browser. The chat's **Reply language: Automatic / Automaattinen** selector is unaffected.
+- **No extra API key or server TTS dependency.** Speech uses the browser Web Speech API, so exact voice naturalness, Finnish voice availability, and audio rendering depend on the visitor's browser, operating system and downloaded voices. Some devices require installing a higher-quality Finnish system voice; an unavailable voice cannot be guaranteed by this package. Browser/OS speech engines may handle synthesis locally or via their providers.
+- The book is rendered as images for reliable cross-browser display; for manual text selection, use **Show page text**, rather than trying to select pixels directly from the page image.
+
 ## What the agent does
 
 - Understands **Finnish or English** questions, with **automatic, Finnish or English** answer-language selection.
@@ -35,6 +44,7 @@ KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and
 | `templates/index.html` | Web interface, prominent title and attribution, chapter links |
 | `static/style.css` | Responsive website styling |
 | `static/app.js` | Browser chat controls, provenance labels, citation links, Markdown and math formatting |
+| `static/speech.js`, `static/speech.css` | Finnish–English speech synthesis, voice selection, media controls, and read-selection UI |
 | `.env.example` | Example environment variables; do not commit real API keys |
 | `render.yaml` | Render Blueprint deployment settings |
 | `tests/test_retrieval.py` | Source-PDF and local index tests |

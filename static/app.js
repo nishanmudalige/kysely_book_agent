@@ -121,6 +121,7 @@
   }
   function renderAnswer(msg, data, fi) {
     msg.textContent = '';
+    msg.lang = fi ? 'fi' : 'en';
     const result = data.category;
     if (data.book_answer) addSection(msg, 'book', data.book_answer, fi, data.sources);
     if (data.outside_answer) {

@@ -23,6 +23,8 @@
   const highlightButton = $('reader-highlight-toggle');
   const highlightLabel = $('reader-highlight-label');
   const highlightNote = $('reader-highlight-note');
+  const readHighlighted = $('reader-read-highlights');
+  let highlightedTexts = [];
   // Validated IDs of supporting Finnish paragraphs attached to a citation link.
   const landingParams = new URLSearchParams(location.search);
   const sourcePage = Number(landingParams.get('page')) || 1;
@@ -142,6 +144,8 @@
   }
   async function showHighlights(page, token) {
     highlights.replaceChildren();
+    highlightedTexts = [];
+    readHighlighted.hidden = true;
     refreshHighlightToggle(page);
     if (!highlightEnabled) return;
     const mode = highlightTermsForPage(page);
@@ -155,6 +159,8 @@
       if (!response.ok) return;
       const data = await response.json();
       if (token !== generation || page !== currentPage || !highlightEnabled) return;
+      highlightedTexts = Array.isArray(data.passage_texts) ? data.passage_texts : [];
+      readHighlighted.hidden = highlightedTexts.length === 0;
       (data.boxes || []).forEach(rect => {
         const el = document.createElement('span');
         el.className = 'reader-highlight';
@@ -167,6 +173,9 @@
       if (mode.kind === 'answer' || mode.kind === 'passages') scrollToFirstEvidence();
     } catch (_) {/* Highlights are optional; page reading remains available. */}
   }
+  readHighlighted.addEventListener('click', () => {
+    if (highlightedTexts.length) window.KyselySpeech?.readText(highlightedTexts.join('\n\n'), 'fi');
+  });
   try { highlightEnabled = saved(HIGHLIGHT_KEY) !== 'off'; } catch (_) {}
   highlightButton.addEventListener('click', () => {
     highlightEnabled = !highlightEnabled;
@@ -190,6 +199,7 @@
   function goToPage(page, updateHistory = true) {
     const target = bounded(page);
     currentPage = target;
+    document.dispatchEvent(new CustomEvent('kysely:pagechange', {detail: {page: target}}));
     const token = ++generation;
     pageInput.value = String(target);
     $('reader-prev').disabled = target === 1;

@@ -97,3 +97,7 @@ html[data-theme="dark"] .reader-highlight-toggle { background: #4f341f !importan
 html[data-theme="dark"] .reader-highlight-toggle:hover { background: #634324 !important; }
 html[data-theme="dark"] .reader-highlight-note { background: #35281c; color: #ffdba6; border-left-color: #f4a544; }
 html[data-theme="dark"] .reader-highlight { background: rgba(255, 151, 25, .43); border-color: rgba(255, 187, 80, .52); }
+
+/* Read the orange source paragraphs aloud in their original Finnish. */
+.reader-speak-evidence[hidden] {display:none!important}
+.reader-speak-evidence {font-size:13px;padding:7px 10px;min-height:34px}

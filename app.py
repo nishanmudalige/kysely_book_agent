@@ -433,6 +433,7 @@ def book_highlights(page_number: int):
         return jsonify(page=page_number, boxes=[], matched=0)
     boxes: list[dict] = []
     matched = 0
+    passage_texts: list[str] = []
     if identifiers:
         paragraph_lookup = {item['id']: item for item in page_passages(str(BOOK_PATH), page_number)}
         for ident in identifiers:
@@ -440,6 +441,7 @@ def book_highlights(page_number: int):
             if para:
                 matched += 1
                 boxes.extend(para['rects'])
+                passage_texts.append(para['text'])
     elif evidence:
         paragraphs = page_passages(str(BOOK_PATH), page_number)
         # Previously-issued quote links continue working, including when
@@ -450,6 +452,7 @@ def book_highlights(page_number: int):
             if matches and matches[0][0] >= .2:
                 matched += 1
                 boxes.extend(matches[0][1]['rects'])
+                passage_texts.append(matches[0][1]['text'])
     else:
         # Preserve direct reader search behaviour, independently of tutor citations.
         with fitz.open(str(BOOK_PATH)) as doc:
@@ -474,7 +477,8 @@ def book_highlights(page_number: int):
             seen.add(key)
         if len(unique) >= 180:
             break
-    return jsonify(page=page_number, boxes=unique, matched=matched)
+    return jsonify(page=page_number, boxes=unique, matched=matched,
+                   passage_texts=list(dict.fromkeys(passage_texts)))
 
 
 @app.post('/api/ask')

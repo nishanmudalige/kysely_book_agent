@@ -23,6 +23,8 @@
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='speech.css') }}">
+  <script defer src="{{ url_for('static', filename='speech.js') }}"></script>
 </head>
 <body data-password-required="{{ '1' if needs_password else '0' }}">
   <div class="page-shell">
@@ -89,7 +91,7 @@
             <h2>Ask KyselyTutor</h2>
             <p>Answers in Finnish or English, with textbook page references.</p>
           </div>
-          <button class="clear-button" id="clear" type="button" title="Start a new conversation">New chat</button>
+          <div class="chat-heading-actions"><button class="speech-launch" id="speech-trigger" type="button" aria-expanded="false" aria-controls="speech-player" title="Read selected text or the latest answer aloud">▶ Read aloud / Lue ääneen</button><button class="clear-button" id="clear" type="button" title="Start a new conversation">New chat</button></div>
         </div>
         <div class="chat-messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text">
           <div class="welcome" id="welcome">
@@ -147,5 +149,23 @@
       <p>KyselyTutor is an independent AI study aid, not affiliated with or endorsed by the author or the University of Helsinki. Translations and explanations are AI-generated.</p>
     </footer>
   </div>
+
+  <!-- Shared read-aloud player: only appears after a user asks to listen. -->
+  <button id="speech-selection-action" class="speech-selection-action" type="button" hidden>▶ Read selection / Lue valittu</button>
+  <section id="speech-player" class="speech-player" role="region" aria-label="Read-aloud player / Ääneenluku" hidden>
+    <div class="speech-head"><strong>Listen / Kuuntele</strong><span class="speech-detected" id="speech-detected">Detecting language automatically</span><button class="speech-close" id="speech-close" type="button" title="Close and stop audio" aria-label="Close and stop audio">×</button></div>
+    <p class="speech-preview" id="speech-preview">Select text to listen in Finnish or English.</p>
+    <div class="speech-controls" role="group" aria-label="Audio playback controls">
+      <button class="speech-control" id="speech-restart" type="button" title="Rewind to beginning / Alkuun" aria-label="Rewind to beginning">⏮</button>
+      <button class="speech-control" id="speech-back" type="button" title="Previous sentence / Edellinen virke" aria-label="Previous sentence">⏪</button>
+      <button class="speech-control primary" id="speech-play" type="button" title="Play or resume / Toista tai jatka" aria-label="Play or resume">▶</button>
+      <button class="speech-control" id="speech-pause" type="button" title="Pause / Tauko" aria-label="Pause">⏸</button>
+      <button class="speech-control" id="speech-next" type="button" title="Next sentence / Seuraava virke" aria-label="Next sentence">⏩</button>
+      <button class="speech-control" id="speech-stop" type="button" title="Stop / Pysäytä" aria-label="Stop">⏹</button>
+      <span class="speech-progress" id="speech-progress" aria-live="polite">Ready</span>
+    </div>
+    <div class="speech-options"><label for="speech-rate">Speed</label><select id="speech-rate"><option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option><option value="1.5">1.5×</option></select><label for="speech-voice">Voice</label><select id="speech-voice"><option value="">Automatic — best available</option></select></div>
+    <p id="speech-notice" class="speech-notice" role="status">Uses the Finnish and English voices available in your browser.</p>
+  </section>
 </body>
 </html>
