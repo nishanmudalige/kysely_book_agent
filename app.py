@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, render_template, request, send_file
 
 from book_search import BookIndex, CHAPTERS, explicit_pages, glossary_expand, section_at
+from evidence_passages import page_passages, offered_passages, selected_passages, overlap
 
 BASE = Path(__file__).resolve().parent
 load_dotenv(BASE / '.env')
@@ -116,13 +117,18 @@ RESPONSE FORMAT:
   chosen language; $...$ and $$...$$ math notation are allowed.
 - referenced_pages must contain ONLY PDF page numbers actually cited in
   book_answer. No invented pages and no phantom citations.
-- For every cited page, include 1–2 SHORT evidence_highlights drawn VERBATIM
-  from the ORIGINAL FINNISH excerpts, each 5–18 consecutive words. The quote
-  must be a specific contiguous phrase DIRECTLY SUPPORTING the answer, not a
-  paraphrase, translation, invented wording, generic chapter heading, or
-  entire paragraph. Copy the Finnish words exactly, even for English answers.
-  Omit evidence if no exact supporting passage is present in excerpts.
-  These quotes are verified against the original PDF before display.
+- For EVERY cited PDF page, select ALL relevant supporting passage IDs from
+  <evidence_passages>. Return a record in supporting_passages: {"page": 41,
+  "ids": ["s0", "s3"]}. IDs correspond to REAL paragraphs on that PDF page.
+- Select passages whose content substantiates the different parts of your
+  book_answer. This is SEMANTIC SUPPORT, not a request to quote exact words.
+  For English translation or paraphrase, select the relevant ORIGINAL FINNISH
+  paragraphs. Include multiple passages (up to 5/page) when multiple parts of
+  the answer rely on different paragraphs. Do not select unrelated material.
+- Only use passage IDs explicitly supplied for the corresponding page. If the
+  evidence is not present, omit a claim or classify it as outside the book.
+- evidence_highlights is an OPTIONAL compatibility field. Do not spend effort
+  copying exact quotes if paragraph IDs are available.
 - For a short question, keep the answer short. For an explanation, use
   headings and worked examples when helpful, but no made-up textbook examples.
 """
@@ -134,11 +140,14 @@ ANSWER_SCHEMA = {
         'book_answer': {'type': 'string', 'description': 'Book-grounded Markdown with [Pnn] citations, or empty.'},
         'outside_answer': {'type': 'string', 'description': 'Non-book general knowledge, or out-of-scope clarification, or empty.'},
         'referenced_pages': {'type': 'array', 'items': {'type': 'integer'}},
+        'supporting_passages': {'type': 'array', 'items': {'type': 'object',
+            'properties': {'page': {'type': 'integer'}, 'ids': {'type': 'array', 'items': {'type': 'string'}}},
+            'required': ['page', 'ids'], 'additionalProperties': False}},
         'evidence_highlights': {'type': 'array', 'items': {'type': 'object',
             'properties': {'page': {'type': 'integer'}, 'quote': {'type': 'string'}},
             'required': ['page', 'quote'], 'additionalProperties': False}},
     },
-    'required': ['category', 'book_answer', 'outside_answer', 'referenced_pages', 'evidence_highlights'],
+    'required': ['category', 'book_answer', 'outside_answer', 'referenced_pages', 'supporting_passages', 'evidence_highlights'],
     'additionalProperties': False,
 }
 
@@ -225,7 +234,8 @@ def validated_evidence(model_highlights, cited: set[int], excerpts: list[dict]) 
     return found
 
 
-def verified_response(model_input: dict, excerpts: list[dict], language: str) -> dict:
+def verified_response(model_input: dict, excerpts: list[dict], language: str,
+                      available_passages: dict | None = None, fallback_query: str = "") -> dict:
     """Validate classifications and citations before exposing them to the frontend."""
     allowed = {chunk['page'] for chunk in excerpts}
     category = str(model_input.get('category', '')).casefold()
@@ -270,14 +280,19 @@ def verified_response(model_input: dict, excerpts: list[dict], language: str) ->
                           'I could not establish the answer from the retrieved passages. '
                           'Please narrow the question or specify a page number.')
 
-    evidence = validated_evidence(model_input.get('evidence_highlights'), cited, excerpts)
+    if available_passages is None:
+        available_passages = offered_passages(str(BOOK_PATH), excerpts)
+    selected = selected_passages(model_input.get('supporting_passages'), cited,
+                                 available_passages,
+                                 legacy_quotes=model_input.get('evidence_highlights'),
+                                 fallback_query=fallback_query)
     sources = []
     for p in sorted(cited):
-        phrases = evidence.get(p, [])
-        params = [('page', p)] + [('h', phrase) for phrase in phrases]
+        ids = selected.get(p, [])
+        params = [('page', p)] + [('b', passage_id) for passage_id in ids]
         sources.append({'page': p, 'section': section_at(p),
                         'url': '/reader?' + urlencode(params),
-                        'has_highlights': bool(phrases)})
+                        'has_highlights': bool(ids)})
     return {'category': category, 'book_answer': book_answer,
             'outside_answer': outside_answer, 'sources': sources}
 
@@ -408,39 +423,58 @@ def book_search_pages():
 def book_highlights(page_number: int):
     if not 1 <= page_number <= INDEX.page_count:
         abort(404)
-    # 'h' values are short verbatim evidence from the answer's cited PDF page.
-    # A separate 'q' supports the existing reader search feature.
+    # "b" selects whole relevant paragraphs from the ACTUAL PDF (no phrase match).
+    # "h" is retained for old citations; "q" for standalone reader searches.
+    identifiers = list(dict.fromkeys(request.args.getlist('b')[:8]))
     evidence = [' '.join(q.split())[:180] for q in request.args.getlist('h')[:2]]
     evidence = [q for q in evidence if len(q) >= 4]
     term = ' '.join(request.args.get('q', '').split())[:100]
-    if not evidence and len(term) < 2:
+    if not identifiers and not evidence and len(term) < 2:
         return jsonify(page=page_number, boxes=[], matched=0)
-    with fitz.open(str(BOOK_PATH)) as doc:
-        page = doc[page_number - 1]
-        boxes = []
-        matched = 0
-        if evidence:
-            # Never highlight approximate keywords for answer citations:
-            # only real text found on the PDF page can be highlighted.
-            for phrase in evidence:
-                rects = page.search_for(phrase)[:16]
-                if rects:
-                    matched += 1
-                boxes.extend(rects)
-        else:
-            # For manual searches, fall back to the individual search terms.
+    boxes: list[dict] = []
+    matched = 0
+    if identifiers:
+        paragraph_lookup = {item['id']: item for item in page_passages(str(BOOK_PATH), page_number)}
+        for ident in identifiers:
+            para = paragraph_lookup.get(ident)
+            if para:
+                matched += 1
+                boxes.extend(para['rects'])
+    elif evidence:
+        paragraphs = page_passages(str(BOOK_PATH), page_number)
+        # Previously-issued quote links continue working, including when
+        # PyMuPDF can't find the precise quotation across hyphenation.
+        for quote in evidence:
+            matches = sorted([(overlap(quote, p['text']), p) for p in paragraphs],
+                             key=lambda t: -t[0])
+            if matches and matches[0][0] >= .2:
+                matched += 1
+                boxes.extend(matches[0][1]['rects'])
+    else:
+        # Preserve direct reader search behaviour, independently of tutor citations.
+        with fitz.open(str(BOOK_PATH)) as doc:
+            page = doc[page_number - 1]
             for word in [term] + [w for w in term.split() if len(w) >= 3]:
                 rects = page.search_for(word)[:30]
                 if rects:
                     matched = 1
-                    boxes.extend(rects)
+                    boxes.extend([{'x': round(rect.x0 / page.rect.width * 100, 3),
+                                   'y': round(rect.y0 / page.rect.height * 100, 3),
+                                   'w': round(rect.width / page.rect.width * 100, 3),
+                                   'h': round(rect.height / page.rect.height * 100, 3)}
+                                  for rect in rects])
                     break
-        items = [{'x': round(rect.x0 / page.rect.width * 100, 3),
-                  'y': round(rect.y0 / page.rect.height * 100, 3),
-                  'w': round(rect.width / page.rect.width * 100, 3),
-                  'h': round(rect.height / page.rect.height * 100, 3)}
-                 for rect in boxes[:45]]
-    return jsonify(page=page_number, boxes=items, matched=matched)
+    # Cap response size, dedupe repeated lines, and keep all rectangles on page.
+    seen = set()
+    unique = []
+    for rect in boxes:
+        key = (rect['x'], rect['y'], rect['w'], rect['h'])
+        if key not in seen:
+            unique.append(rect)
+            seen.add(key)
+        if len(unique) >= 180:
+            break
+    return jsonify(page=page_number, boxes=unique, matched=matched)
 
 
 @app.post('/api/ask')
@@ -482,6 +516,11 @@ def ask():
             excerpts = INDEX.search(question + ' ' + last_user[:170], expansion=expansion, top_k=TOP_K)
             if translation_mode != 'none' and excerpts:
                 excerpts = INDEX.get_pages([excerpts[0]['page']], max_chars=6700)
+        available_passages = offered_passages(str(BOOK_PATH), excerpts)
+        formatted_passages = '\n'.join(
+            f'<passage pdf_page="{page}" id="{entry["id"]}">{entry["text"]}</passage>'
+            for page, records in available_passages.items() for entry in records
+        )
         formatted_excerpts = '\n\n'.join(
             f'<excerpt pdf_page="{c["page"]}" section="{c["section"]}">\n'
             f'{c["text"]}\n</excerpt>' for c in excerpts
@@ -496,6 +535,7 @@ def ask():
             'type': 'text',
             'text': (f'<book_metadata>\n{BOOK_INFO}\n</book_metadata>\n'
                      f'<book_excerpts>\n{formatted_excerpts}\n</book_excerpts>\n'
+                     f'<evidence_passages>\n{formatted_passages}\n</evidence_passages>\n'
                      f'LANGUAGE: {hint}\nQUESTION: {question}\n'
                      'Classify source provenance carefully and respond in the required JSON format.'),
         }]
@@ -512,7 +552,9 @@ def ask():
         answer_text = ''.join(block.text for block in result.content if block.type == 'text')
         if not answer_text:
             return jsonify(error='Claude did not return a complete JSON answer. Try again.'), 502
-        answer = verified_response(json.loads(answer_text), excerpts, response_lang)
+        answer = verified_response(json.loads(answer_text), excerpts, response_lang,
+                                   available_passages=available_passages,
+                                   fallback_query=question + " " + expansion if not pinned else question)
         return jsonify(**answer)
     except anthropic.AuthenticationError:
         app.logger.exception('Anthropic authentication error')

@@ -63,11 +63,13 @@
     });
   }
 
+  // These semantic status classes deliberately keep provenance visible in both
+  // light and dark mode: green = book, orange = related but non-book, red = unrelated.
   const CATEGORY = {
-    book: {en: 'From the textbook', fi: 'Kirjasta', css: ''},
-    mixed: {en: 'From the textbook', fi: 'Kirjasta', css: ''},
-    related_outside: {en: 'Related — outside the book', fi: 'Aiheeseen liittyvä — ei kirjasta', css: 'outside'},
-    out_of_scope: {en: 'Outside the scope of this book', fi: 'Kirjan aihepiirin ulkopuolella', css: 'scope'}
+    book: {en: 'From the textbook', fi: 'Kirjasta', css: 'book'},
+    mixed: {en: 'From the textbook', fi: 'Kirjasta', css: 'book'},
+    related_outside: {en: 'Related — outside the textbook', fi: 'Aiheeseen liittyvä — ei kirjasta', css: 'outside'},
+    out_of_scope: {en: 'Not relevant to this textbook', fi: 'Ei liity kirjan aihepiiriin', css: 'scope'}
   };
 
   function isFinnish(q) {
@@ -137,8 +139,8 @@
       });
       if (data.sources.some(s => s.has_highlights)) {
         container.appendChild(el('small', 'sources-hint', fi
-          ? 'Oranssi korostus näyttää vastausta tukevan alkuperäisen tekstin. Korostuksen voi poistaa lukijassa.'
-          : 'Orange highlights show supporting original text. You can switch highlights off in the reader.'));
+          ? 'Oranssi korostaa vastausta tukevia tekstikappaleita myös silloin, kun vastaus on muotoiltu omin sanoin tai käännetty. Korostuksen voi kytkeä pois lukijassa.'
+          : 'Orange highlights show related supporting passages in the original book, even when the answer is paraphrased or translated. You can turn them off in the reader.'));
       }
       msg.appendChild(container);
     }

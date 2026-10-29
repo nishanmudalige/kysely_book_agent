@@ -13,9 +13,10 @@ KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and
 - Understands **Finnish or English** questions, with **automatic, Finnish or English** answer-language selection.
 - Answers *using the original book*, giving clickable **PDF page references** when supported by retrieved passages.
 - Translates passages and requested pages of the Finnish book into **English**, preserving numerical and statistical meaning. These are unofficial, AI-generated translations.
-- Accepts questions about *related* topics not substantiated by the textbook. They are explicitly labelled **“Related — outside the book / Aiheeseen liittyvä — ei kirjasta”** and identified as general AI knowledge, **not live web research**.
-- Labels irrelevant questions **“Outside the scope of this book / Kirjan aihepiirin ulkopuolella”** and explains the boundary instead of pretending the book covers them.
+- Accepts questions about *related* topics not substantiated by the textbook. They are explicitly labelled **“Related — outside the textbook / Aiheeseen liittyvä — ei kirjasta”** and identified as general AI knowledge, **not live web research**.
+- Labels irrelevant questions **“Not relevant to this textbook / Ei liity kirjan aihepiiriin”** and explains the boundary instead of pretending the book covers them.
 - Separates book-supported and general-knowledge content into different sections when a response uses both.
+- Uses **green** source labels for textbook-supported explanations, **orange** for related information outside the book, and **red** for unrelated requests, in both light and dark mode.
 - Includes a prominent link **“Open the textbook PDF / Avaa PDF”** and a chapter navigator.
 - Can render PDF page images to Claude for questions explicitly about figures/tables (API vision usage may cost more).
 - Optionally uses an `APP_PASSWORD` to protect billable Claude chat requests. The open-licensed PDF is publicly accessible even when the chat is password protected.
@@ -272,23 +273,34 @@ text overlay. Image quality depends on the device and zoom factor.
 No remote PDF.js/CDN, iframe, or special browser PDF capabilities are required.
 
 
-## Rotating question bank and cited-passage highlighting (October 2026)
+## Rotating suggested questions (October 2026)
 
-The chat welcome screen displays **four example questions in one row**: two
-Finnish and two English. On small screens, swipe the row sideways. Each new
-visit selects new questions from a bank of 12 Finnish + 12 English prompts;
-questions from the previous visit are excluded using browser localStorage.
+The welcome screen displays four clickable example prompts in one horizontal
+row, two Finnish and two English. On smaller screens the row scrolls sideways.
+The app selects from a bank of 24 and avoids repeating the prior set.
 
-The tutor also asks Claude to identify 1–2 short **exact Finnish supporting
-passages** from the retrieved textbook excerpts for each cited page. These are
-checked against the original PDF before they can be used. When an exact match
-is available, a citation such as `[P41]` links to the custom reader with
-translucent orange highlighting at the matching passage. The reader can
-scroll directly to it and offers a **Hide highlights / Show highlights** toggle.
-The setting is remembered in the same browser. If no matching evidence quote
-was returned, the citation still opens the correct page, without a misleading
-highlight. The orange overlay does not alter the downloadable PDF.
+## Meaning-based paragraph highlights (latest update)
 
-For existing deployments, see `THIS_UPDATE.md`. This update requires `app.py`
-plus frontend files (not just a UI-only replacement). It adds no dependencies
-or new environment variables.
+Textbook answer citations no longer require exact Finnish text quotation matches.
+For each retrieved excerpt, the server identifies **real paragraph passages** in
+that PDF page and gives them stable page-specific passage IDs. Claude selects
+**all relevant supporting passages** (up to eight per cited page), including
+when its answer is translated into English or paraphrased. The server accepts
+only IDs offered from the retrieved page; it sends line rectangles to the
+custom reader, which places translucent orange highlights over the original
+Finnish lines. Multiple relevant paragraphs can be highlighted on one page.
+
+If Claude omits passage IDs, a fallback selects the most relevant retrieved
+passage(s) using the original question and Finnish search terms. This is
+**related-context highlighting**, not a guarantee of exact quote-level
+attribution. Both `Show highlights` and `Hide highlights` work as before,
+with the saved preference. Search highlighting and legacy `h=` citation links
+remain supported, and outside-book answers never receive textbook highlights.
+
+All positions originate from real selectable PDF text. Complex figures or
+scanned elements without extractable text may not have paragraph highlights.
+Existing answers produced before the update might contain old-style links;
+new answers will use `b=` passage links automatically.
+
+To update an existing deployment, see `THIS_UPDATE.md`. No new Python
+packages, Claude keys, or environment variables are required.

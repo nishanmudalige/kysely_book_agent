@@ -23,9 +23,10 @@
   const highlightButton = $('reader-highlight-toggle');
   const highlightLabel = $('reader-highlight-label');
   const highlightNote = $('reader-highlight-note');
-  // Verbatim, validated Finnish snippets attached to the tutor's citation link.
+  // Validated IDs of supporting Finnish paragraphs attached to a citation link.
   const landingParams = new URLSearchParams(location.search);
   const sourcePage = Number(landingParams.get('page')) || 1;
+  const sourceParagraphs = landingParams.getAll('b').slice(0, 8).filter(s => /^s\d{1,3}$/.test(s));
   const sourceQuotes = landingParams.getAll('h').slice(0, 2).map(s => s.trim()).filter(s => s.length >= 4 && s.length <= 180);
   const THEME_KEY = 'kyselytutor_theme_v1';
   const CONTENTS_KEY = 'kyselytutor_contents_open_v2';
@@ -37,7 +38,7 @@
   let pageText = '';
   let textGeneration = 0;
   let highlightEnabled = true;
-  let jumpToEvidence = sourceQuotes.length > 0;
+  let jumpToEvidence = sourceParagraphs.length > 0 || sourceQuotes.length > 0;
 
   function saved(key) {try { return localStorage.getItem(key); } catch (_) {return null;} }
   function remember(key, val) {try {localStorage.setItem(key, val);} catch (_) {}}
@@ -108,10 +109,14 @@
   function linkForPage(page) {
     const params = new URLSearchParams();
     params.set('page', String(page));
-    if (page === sourcePage) sourceQuotes.forEach(q => params.append('h', q));
+    if (page === sourcePage) {
+      sourceParagraphs.forEach(id => params.append('b', id));
+      sourceQuotes.forEach(q => params.append('h', q));
+    }
     return `/reader?${params.toString()}`;
   }
   function highlightTermsForPage(page) {
+    if (page === sourcePage && sourceParagraphs.length) return {kind: 'passages', terms: sourceParagraphs};
     if (page === sourcePage && sourceQuotes.length) return {kind: 'answer', terms: sourceQuotes};
     if (activeQuery) return {kind: 'search', terms: [activeQuery]};
     return {kind: 'none', terms: []};
@@ -124,7 +129,7 @@
     highlightButton.setAttribute('aria-pressed', String(highlightEnabled));
     highlightLabel.textContent = highlightEnabled ? 'Hide highlights' : 'Show highlights';
     highlightButton.title = highlightEnabled ? 'Remove the orange highlighting' : 'Highlight relevant text in orange';
-    highlightNote.hidden = mode.kind !== 'answer';
+    highlightNote.hidden = mode.kind !== 'answer' && mode.kind !== 'passages';
   }
   function scrollToFirstEvidence() {
     if (!jumpToEvidence || !image.complete || !image.naturalWidth || !highlights.firstElementChild) return;
@@ -142,7 +147,8 @@
     const mode = highlightTermsForPage(page);
     if (!mode.terms.length) return;
     const params = new URLSearchParams();
-    if (mode.kind === 'answer') mode.terms.forEach(q => params.append('h', q));
+    if (mode.kind === 'passages') mode.terms.forEach(id => params.append('b', id));
+    else if (mode.kind === 'answer') mode.terms.forEach(q => params.append('h', q));
     else params.set('q', mode.terms[0]);
     try {
       const response = await fetch(`/api/book/highlights/${page}?${params.toString()}`);
@@ -158,7 +164,7 @@
         el.style.height = `${rect.h}%`;
         highlights.appendChild(el);
       });
-      if (mode.kind === 'answer') scrollToFirstEvidence();
+      if (mode.kind === 'answer' || mode.kind === 'passages') scrollToFirstEvidence();
     } catch (_) {/* Highlights are optional; page reading remains available. */}
   }
   try { highlightEnabled = saved(HIGHLIGHT_KEY) !== 'off'; } catch (_) {}

@@ -99,9 +99,19 @@ h1 { font-family: Georgia,"Times New Roman",serif; font-size: clamp(36px,4vw,52p
 .message pre code { background: none; padding: 0; }
 .message blockquote { border-left: 3px solid var(--blue); margin: 13px 0; padding: 3px 0 3px 14px; color: #444; }
 .message li + li { margin-top: 5px; }
-.provenance { display: inline-block; font-size: 12px; font-weight: 780; text-transform: uppercase; letter-spacing: .045em; color: var(--blue-dark); border-left: 3px solid var(--blue); background: var(--blue-tint); padding: 5px 10px; margin-bottom: 11px; }
-.provenance.outside { color: #363636; border-color: #777; background: #f2f2f2; }
-.provenance.scope { color: #343434; border-color: #232323; background: #f2f2f2; }
+/* Answer provenance: distinct coloured boxes, independent of the site's blue accents.
+   Green = sourced from book; amber/orange = related information outside the book;
+   red = unrelated/out of scope. Text and border are readable in both themes. */
+.provenance {
+  display: inline-block; width: fit-content; max-width: 100%;
+  font-size: 13px; font-weight: 780; text-transform: uppercase;
+  letter-spacing: .035em; line-height: 1.45; padding: 7px 12px;
+  margin-bottom: 12px; border: 1px solid #79c69b; border-left: 5px solid #16834c;
+  border-radius: 6px; color: #116337; background: #e6f6ec;
+}
+.provenance.book { color: #116337; background: #e6f6ec; border-color: #79c69b; border-left-color: #16834c; }
+.provenance.outside { color: #824300; background: #fff0d9; border-color: #e5b269; border-left-color: #d67c09; }
+.provenance.scope { color: #9b1f2b; background: #ffebed; border-color: #e8a0a6; border-left-color: #ca3541; }
 .provenance-note { font-size: 14px; margin: 0 0 12px; color: var(--muted); }
 .answer-section + .answer-section { border-top: 1px solid var(--line); padding-top: 19px; margin-top: 19px; }
 .sources { border-top: 1px solid var(--line); padding-top: 15px; margin-top: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -398,9 +408,10 @@ html[data-theme="dark"] .message pre,
 html[data-theme="dark"] .message code { color: var(--ink); background: #10202b; }
 html[data-theme="dark"] .message pre code { background: transparent; }
 html[data-theme="dark"] .message blockquote { color: var(--muted); }
-html[data-theme="dark"] .provenance { color: #b8ecff; background: #224357; border-color: #65c9f1; }
-html[data-theme="dark"] .provenance.outside { color: #e0e9ef; background: #34434e; border-color: #97a8b5; }
-html[data-theme="dark"] .provenance.scope { color: #e0e9ef; background: #34434e; border-color: #abb8c2; }
+html[data-theme="dark"] .provenance,
+html[data-theme="dark"] .provenance.book { color: #b4f4d0; background: #153c2b; border-color: #3b956a; border-left-color: #65d9a0; }
+html[data-theme="dark"] .provenance.outside { color: #ffe1ad; background: #503517; border-color: #b77f37; border-left-color: #ffc16b; }
+html[data-theme="dark"] .provenance.scope { color: #ffd1d3; background: #4d2229; border-color: #b55b68; border-left-color: #ff8992; }
 html[data-theme="dark"] .page-link { color: #b9efff; background: #23465a; border-color: #537f99; }
 html[data-theme="dark"] .page-link:hover { color: #fff; background: #2b617a; }
 html[data-theme="dark"] .composer { border-top-color: #3f7891; }

@@ -1,33 +1,49 @@
-# KyselyTutor – Rotating suggestions and answer highlights
+# KyselyTutor: Relevant-paragraph highlighting update
 
-Changes compared with the previous universal-reader release:
+This corrects inconsistent highlighting caused by requiring Claude to supply
+an exact Finnish quote. It now highlights **all relevant paragraphs selected
+by Claude** from real source passages instead of relying on substring matching.
+Highlights work with Finnish explanations, English paraphrases, and translations.
 
-- Four suggested questions form one horizontal row on desktop; on small screens, swipe or scroll horizontally to access all four.
-- The app randomly chooses two Finnish and two English examples from a bank of 24 (12 per language). A local-storage record prevents a question from appearing in consecutive refreshes on the same browser.
-- Claude's JSON responses can include concise **verbatim Finnish evidence phrases** for each cited PDF page. The server verifies these phrases against both the retrieved textbook excerpts and the *actual* PDF page. Unverified evidence is ignored.
-- Cited page links open the custom `/reader` with the evidence phrases in the URL. The reader highlights those original words with translucent orange overlays and scrolls to them.
-- **Hide highlights / Show highlights** toggles the overlay, retaining the preference in the reader. The highlight toggle appears only on pages for which highlights are available (including manual search).
-- Original PDF download, English/Finnish answers, dark mode, contents toggle, access code, Claude configuration, and existing `/reader?page=NN` links are unchanged.
+The reader renders selected lines in transparent orange and continues to
+provide a Show/Hide highlights control. It works with links like:
 
-## Updating an existing deployment
+    /reader?page=41&b=s0&b=s3&b=s4
 
-Extract the update ZIP at the root of your existing repository, replacing the corresponding files. Then run:
+Old `?h=` links still use approximate paragraph matching. Out-of-book
+answers continue to be clearly identified and have no book highlights.
+
+## Existing GitHub/Render deployment
+
+Extract the **update ZIP** into your repository root and replace the included
+files. **Also copy the new file `evidence_passages.py` into the project root.**
+Then run these commands from your project directory:
 
 ```bash
-git add app.py templates/index.html templates/reader.html static/app.js static/style.css static/reader.js static/reader.css tests/test_answer_highlights.py
-
-git commit -m "Rotate sample questions and highlight textbook evidence"
+git add app.py evidence_passages.py static/app.js static/reader.js templates/reader.html tests/test_answer_highlights.py README.md THIS_UPDATE.md
+git commit -m "Highlight relevant textbook paragraphs in reader"
 git push origin main
 ```
 
-Render should redeploy if automatic deployments are enabled. **Backend `app.py` must also be updated** because it requests and validates the highlight evidence from Claude. No new packages or environment variables are required.
+Render should rebuild automatically if auto-deploy is enabled. No environment
+variable, `requirements.txt`, PDF, or API key changes are needed. New answer
+links will carry selected paragraph IDs. Previously rendered chat responses
+cannot be retroactively rebuilt into the new format, but old `h=` links work.
 
-## Notes
+## Verification
 
-The highlight feature relies on Claude returning a short exact excerpt from the Finnish book. If Claude fails to supply a matching passage, the citation still opens the correct page **without an unverified orange highlight**. The reader never highlights text that was not found in the original PDF. Old chat messages or manually entered bare `/reader?page=N` URLs cannot reconstruct earlier answer evidence, but pages remain readable and searchable.
-
-Test with:
+After installing dependencies locally, run:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+Then ask an English question about validity/reliability, click a citation to
+page 41, and check that multiple related Finnish passages are orange. Toggle
+Show/Hide. Repeat for a Finnish question about factor analysis (pages 93–96).
+
+**Limitation:** These are model-selected relevant passages rather than exact
+sentence alignment. If the model's evidence mapping is incomplete, a small
+number of related paragraphs may still be missed; the fallback reduces, but
+cannot completely eliminate, that possibility. Unextractable figures cannot
+be text-highlighted.
