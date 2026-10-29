@@ -20,14 +20,24 @@
   const textButton = $('reader-text-toggle');
   const textContent = $('reader-text-content');
   const highlights = $('reader-highlights');
+  const highlightButton = $('reader-highlight-toggle');
+  const highlightLabel = $('reader-highlight-label');
+  const highlightNote = $('reader-highlight-note');
+  // Verbatim, validated Finnish snippets attached to the tutor's citation link.
+  const landingParams = new URLSearchParams(location.search);
+  const sourcePage = Number(landingParams.get('page')) || 1;
+  const sourceQuotes = landingParams.getAll('h').slice(0, 2).map(s => s.trim()).filter(s => s.length >= 4 && s.length <= 180);
   const THEME_KEY = 'kyselytutor_theme_v1';
   const CONTENTS_KEY = 'kyselytutor_contents_open_v2';
+  const HIGHLIGHT_KEY = 'kyselytutor_reader_highlights_v1';
   let currentPage = 1;
   let zoom = null;      // null means fit to available width
   let activeQuery = '';
   let generation = 0;
   let pageText = '';
   let textGeneration = 0;
+  let highlightEnabled = true;
+  let jumpToEvidence = sourceQuotes.length > 0;
 
   function saved(key) {try { return localStorage.getItem(key); } catch (_) {return null;} }
   function remember(key, val) {try {localStorage.setItem(key, val);} catch (_) {}}
@@ -95,14 +105,50 @@
       else link.removeAttribute('aria-current');
     });
   }
+  function linkForPage(page) {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    if (page === sourcePage) sourceQuotes.forEach(q => params.append('h', q));
+    return `/reader?${params.toString()}`;
+  }
+  function highlightTermsForPage(page) {
+    if (page === sourcePage && sourceQuotes.length) return {kind: 'answer', terms: sourceQuotes};
+    if (activeQuery) return {kind: 'search', terms: [activeQuery]};
+    return {kind: 'none', terms: []};
+  }
+  function refreshHighlightToggle(page) {
+    const mode = highlightTermsForPage(page);
+    const hasHighlights = mode.terms.length > 0;
+    highlightButton.hidden = !hasHighlights;
+    highlightButton.disabled = !hasHighlights;
+    highlightButton.setAttribute('aria-pressed', String(highlightEnabled));
+    highlightLabel.textContent = highlightEnabled ? 'Hide highlights' : 'Show highlights';
+    highlightButton.title = highlightEnabled ? 'Remove the orange highlighting' : 'Highlight relevant text in orange';
+    highlightNote.hidden = mode.kind !== 'answer';
+  }
+  function scrollToFirstEvidence() {
+    if (!jumpToEvidence || !image.complete || !image.naturalWidth || !highlights.firstElementChild) return;
+    const first = highlights.firstElementChild;
+    const fraction = Math.max(0, Math.min(1, parseFloat(first.style.top) / 100 || 0));
+    requestAnimationFrame(() => {
+      scrollArea.scrollTop = Math.max(0, frame.offsetTop + fraction * frame.clientHeight - 110);
+      jumpToEvidence = false;
+    });
+  }
   async function showHighlights(page, token) {
     highlights.replaceChildren();
-    if (!activeQuery) return;
+    refreshHighlightToggle(page);
+    if (!highlightEnabled) return;
+    const mode = highlightTermsForPage(page);
+    if (!mode.terms.length) return;
+    const params = new URLSearchParams();
+    if (mode.kind === 'answer') mode.terms.forEach(q => params.append('h', q));
+    else params.set('q', mode.terms[0]);
     try {
-      const response = await fetch(`/api/book/highlights/${page}?q=${encodeURIComponent(activeQuery)}`);
+      const response = await fetch(`/api/book/highlights/${page}?${params.toString()}`);
       if (!response.ok) return;
       const data = await response.json();
-      if (token !== generation || page !== currentPage) return;
+      if (token !== generation || page !== currentPage || !highlightEnabled) return;
       (data.boxes || []).forEach(rect => {
         const el = document.createElement('span');
         el.className = 'reader-highlight';
@@ -112,8 +158,17 @@
         el.style.height = `${rect.h}%`;
         highlights.appendChild(el);
       });
-    } catch (_) {/* An unavailable highlight should not prevent reading. */}
+      if (mode.kind === 'answer') scrollToFirstEvidence();
+    } catch (_) {/* Highlights are optional; page reading remains available. */}
   }
+  try { highlightEnabled = saved(HIGHLIGHT_KEY) !== 'off'; } catch (_) {}
+  highlightButton.addEventListener('click', () => {
+    highlightEnabled = !highlightEnabled;
+    remember(HIGHLIGHT_KEY, highlightEnabled ? 'on' : 'off');
+    // If re-enabled, return the reader to the evidence on this page.
+    if (highlightEnabled && currentPage === sourcePage) jumpToEvidence = true;
+    showHighlights(currentPage, generation);
+  });
   async function loadPageText(page, token) {
     try {
       const response = await fetch(`/api/book/text/${page}`);
@@ -136,7 +191,7 @@
     status.textContent = `Page ${target} of ${total} · Sivu ${target}/${total}`;
     image.alt = `Original textbook page ${target} of ${total}, authored by Kimmo Vehkalahti`;
     frame.classList.add('loading');
-    image.onload = () => {if (token === generation) frame.classList.remove('loading');};
+    image.onload = () => {if (token === generation) {frame.classList.remove('loading');scrollToFirstEvidence();}};
     image.onerror = () => {if (token === generation) {frame.classList.remove('loading');status.textContent = `Page ${target} could not be loaded. Try refreshing.`;}};
     const resolution = displayZoom() > 2.55 ? 3.5 : 2.5;
     image.src = `/api/book/page/${target}.png?scale=${resolution}`;
@@ -148,14 +203,14 @@
     const tt = ++textGeneration;
     if (!textView.hidden) loadPageText(target, tt);
     updateChapterSelection();
-    if (updateHistory) history.pushState({page: target}, '', `/reader?page=${target}`);
+    if (updateHistory) history.pushState({page: target}, '', linkForPage(target));
   }
   $('reader-prev').addEventListener('click', () => goToPage(currentPage - 1));
   $('reader-next').addEventListener('click', () => goToPage(currentPage + 1));
   pageInput.addEventListener('change', () => goToPage(pageInput.value));
   pageInput.addEventListener('keydown', event => {if (event.key === 'Enter') {event.preventDefault();pageInput.blur();}});
   window.addEventListener('popstate', () => goToPage(getUrlPage(), false));
-  window.addEventListener('hashchange', () => {goToPage(getUrlPage(), false);history.replaceState({page:currentPage}, '', `/reader?page=${currentPage}`);});
+  window.addEventListener('hashchange', () => {goToPage(getUrlPage(), false);history.replaceState({page:currentPage}, '', linkForPage(currentPage));});
   document.querySelectorAll('.reader-chapter').forEach(link => link.addEventListener('click', event => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
     event.preventDefault();
@@ -200,6 +255,7 @@
     chaptersSection.hidden = false;
     activeQuery = '';
     highlights.replaceChildren();
+    showHighlights(currentPage, generation);
   });
   textButton.addEventListener('click', () => {
     const show = textView.hidden;
@@ -222,12 +278,12 @@
       setTimeout(() => {button.textContent = original;}, 1600);
     } catch (_) {status.textContent = 'Copy unavailable; select the address or page text manually.';}
   }
-  $('reader-copy').addEventListener('click', () => copyValue(`${location.origin}/reader?page=${currentPage}`, $('reader-copy'), 'Copied!'));
+  $('reader-copy').addEventListener('click', () => copyValue(`${location.origin}${linkForPage(currentPage)}`, $('reader-copy'), 'Copied!'));
   $('reader-copy-text').addEventListener('click', async () => {
     if (!pageText) return;
     await copyValue(pageText, $('reader-copy-text'), 'Copied!');
   });
   const start = bounded(getUrlPage());
-  history.replaceState({page:start}, '', `/reader?page=${start}`);
+  history.replaceState({page:start}, '', linkForPage(start));
   goToPage(start, false);
 })();

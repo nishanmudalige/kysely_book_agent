@@ -419,3 +419,29 @@ html[data-theme="dark"] .welcome-kicker span { color: #93b9ca; }
 @media (max-width: 530px) {
   .theme-toggle { font-size: 13px; gap: 7px; padding: 8px 10px; }
 }
+
+/* Four example cards in a single row. On small screens the row scrolls sideways,
+   rather than collapsing into a 2x2 or four-row grid. */
+.welcome { max-width: none; width: 100%; }
+.suggestions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: none;
+  align-items: stretch;
+  justify-content: start;
+}
+.suggestion { min-width: 0; min-height: 132px; font-size: 13.5px; gap: 7px; padding: 13px 10px; flex-wrap: wrap; align-content: flex-start; }
+.suggestion-lang { font-size: 11px; min-height: 23px; min-width: 27px; }
+.suggestion-copy { flex: 1 1 100%; overflow-wrap: break-word; line-height: 1.44; }
+.suggestion-arrow { margin-left: auto; align-self: flex-end; }
+.sources-hint { display: block; width: 100%; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+@media (max-width: 1000px) {
+  .suggestions { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(205px, 56%); overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x mandatory; padding: 0 2px 10px; }
+  .suggestion { scroll-snap-align: start; min-height: 120px; }
+}
+@media (max-width: 530px) {
+  .suggestions { grid-auto-columns: minmax(225px, 78%); gap: 9px; }
+  .suggestion { min-height: 115px; font-size: 14px; }
+}

@@ -16,6 +16,7 @@ import math
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlencode
 
 import anthropic
 import fitz
@@ -115,6 +116,13 @@ RESPONSE FORMAT:
   chosen language; $...$ and $$...$$ math notation are allowed.
 - referenced_pages must contain ONLY PDF page numbers actually cited in
   book_answer. No invented pages and no phantom citations.
+- For every cited page, include 1–2 SHORT evidence_highlights drawn VERBATIM
+  from the ORIGINAL FINNISH excerpts, each 5–18 consecutive words. The quote
+  must be a specific contiguous phrase DIRECTLY SUPPORTING the answer, not a
+  paraphrase, translation, invented wording, generic chapter heading, or
+  entire paragraph. Copy the Finnish words exactly, even for English answers.
+  Omit evidence if no exact supporting passage is present in excerpts.
+  These quotes are verified against the original PDF before display.
 - For a short question, keep the answer short. For an explanation, use
   headings and worked examples when helpful, but no made-up textbook examples.
 """
@@ -126,8 +134,11 @@ ANSWER_SCHEMA = {
         'book_answer': {'type': 'string', 'description': 'Book-grounded Markdown with [Pnn] citations, or empty.'},
         'outside_answer': {'type': 'string', 'description': 'Non-book general knowledge, or out-of-scope clarification, or empty.'},
         'referenced_pages': {'type': 'array', 'items': {'type': 'integer'}},
+        'evidence_highlights': {'type': 'array', 'items': {'type': 'object',
+            'properties': {'page': {'type': 'integer'}, 'quote': {'type': 'string'}},
+            'required': ['page', 'quote'], 'additionalProperties': False}},
     },
-    'required': ['category', 'book_answer', 'outside_answer', 'referenced_pages'],
+    'required': ['category', 'book_answer', 'outside_answer', 'referenced_pages', 'evidence_highlights'],
     'additionalProperties': False,
 }
 
@@ -175,6 +186,45 @@ def render_page_as_image(page_number: int):
     return {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': encoded}}
 
 
+def validated_evidence(model_highlights, cited: set[int], excerpts: list[dict]) -> dict[int, list[str]]:
+    """Allow only short, exact, useful phrases actually present in the cited PDF page.
+
+    This makes highlighting evidence-backed, not an arbitrary model-supplied
+    rectangle or answer paraphrase. Unverifiable phrases are skipped.
+    """
+    if not isinstance(model_highlights, list) or not cited:
+        return {}
+    source_pages = {int(chunk['page']) for chunk in excerpts}
+    excerpt_text = {page: ' '.join(' '.join(c['text'].casefold().split())
+                                   for c in excerpts if c['page'] == page)
+                    for page in source_pages}
+    found: dict[int, list[str]] = {}
+    # Limit cost even if the model returns too many candidates.
+    with fitz.open(str(BOOK_PATH)) as document:
+        for item in model_highlights[:24]:
+            if not isinstance(item, dict):
+                continue
+            page = item.get('page')
+            if type(page) is not int or page not in cited or page not in source_pages:
+                continue
+            if len(found.get(page, [])) >= 2:
+                continue
+            quote = ' '.join(str(item.get('quote') or '').split()).strip(' "“”')
+            if not 22 <= len(quote) <= 180 or not 4 <= len(quote.split()) <= 24:
+                continue
+            if quote.casefold() in {x.casefold() for x in found.get(page, [])}:
+                continue
+            if ' '.join(quote.casefold().split()) not in excerpt_text.get(page, ''):
+                continue
+            # PyMuPDF matches across text-line breaks and hyphenated words.
+            # Search only this trusted, packaged textbook page.
+            boxes = document[page - 1].search_for(quote)
+            if not boxes or len(boxes) > 12:
+                continue
+            found.setdefault(page, []).append(quote)
+    return found
+
+
 def verified_response(model_input: dict, excerpts: list[dict], language: str) -> dict:
     """Validate classifications and citations before exposing them to the frontend."""
     allowed = {chunk['page'] for chunk in excerpts}
@@ -220,8 +270,14 @@ def verified_response(model_input: dict, excerpts: list[dict], language: str) ->
                           'I could not establish the answer from the retrieved passages. '
                           'Please narrow the question or specify a page number.')
 
-    sources = [{'page': p, 'section': section_at(p), 'url': f'/reader?page={p}'}
-               for p in sorted(cited)]
+    evidence = validated_evidence(model_input.get('evidence_highlights'), cited, excerpts)
+    sources = []
+    for p in sorted(cited):
+        phrases = evidence.get(p, [])
+        params = [('page', p)] + [('h', phrase) for phrase in phrases]
+        sources.append({'page': p, 'section': section_at(p),
+                        'url': '/reader?' + urlencode(params),
+                        'has_highlights': bool(phrases)})
     return {'category': category, 'book_answer': book_answer,
             'outside_answer': outside_answer, 'sources': sources}
 
@@ -352,22 +408,39 @@ def book_search_pages():
 def book_highlights(page_number: int):
     if not 1 <= page_number <= INDEX.page_count:
         abort(404)
+    # 'h' values are short verbatim evidence from the answer's cited PDF page.
+    # A separate 'q' supports the existing reader search feature.
+    evidence = [' '.join(q.split())[:180] for q in request.args.getlist('h')[:2]]
+    evidence = [q for q in evidence if len(q) >= 4]
     term = ' '.join(request.args.get('q', '').split())[:100]
-    if len(term) < 2:
-        return jsonify(page=page_number, boxes=[])
+    if not evidence and len(term) < 2:
+        return jsonify(page=page_number, boxes=[], matched=0)
     with fitz.open(str(BOOK_PATH)) as doc:
         page = doc[page_number - 1]
-        words = [term] + [w for w in term.split() if len(w) >= 3]
         boxes = []
-        for word in words:
-            for rect in page.search_for(word)[:30]:
-                boxes.append({'x': round(rect.x0 / page.rect.width * 100, 3),
-                              'y': round(rect.y0 / page.rect.height * 100, 3),
-                              'w': round(rect.width / page.rect.width * 100, 3),
-                              'h': round(rect.height / page.rect.height * 100, 3)})
-            if boxes:
-                break
-    return jsonify(page=page_number, boxes=boxes)
+        matched = 0
+        if evidence:
+            # Never highlight approximate keywords for answer citations:
+            # only real text found on the PDF page can be highlighted.
+            for phrase in evidence:
+                rects = page.search_for(phrase)[:16]
+                if rects:
+                    matched += 1
+                boxes.extend(rects)
+        else:
+            # For manual searches, fall back to the individual search terms.
+            for word in [term] + [w for w in term.split() if len(w) >= 3]:
+                rects = page.search_for(word)[:30]
+                if rects:
+                    matched = 1
+                    boxes.extend(rects)
+                    break
+        items = [{'x': round(rect.x0 / page.rect.width * 100, 3),
+                  'y': round(rect.y0 / page.rect.height * 100, 3),
+                  'w': round(rect.width / page.rect.width * 100, 3),
+                  'h': round(rect.height / page.rect.height * 100, 3)}
+                 for rect in boxes[:45]]
+    return jsonify(page=page_number, boxes=items, matched=matched)
 
 
 @app.post('/api/ask')

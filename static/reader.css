@@ -60,7 +60,7 @@
 #reader-image {display:block;width:100%;height:auto;opacity:1;transition:opacity .12s ease}
 .reader-image-frame.loading #reader-image {opacity:.25}
 .reader-highlights {pointer-events:none;position:absolute;inset:0}
-.reader-highlight {position:absolute;background:#ffe05875;border:1px solid #deae00af;border-radius:1px;mix-blend-mode:multiply}
+.reader-highlight {position:absolute;background:rgba(255, 151, 25, .37);border:1px solid rgba(220, 99, 0, .48);border-radius:1px;mix-blend-mode:multiply}
 .reader-page-text {width:100%;max-width:940px;margin:auto;background:#fff;border:1px solid #becbd1;padding:18px 22px;color:#222;box-shadow:0 3px 10px #0d26331b}
 .reader-page-text[hidden] {display:none}
 .reader-text-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #ddd;padding-bottom:12px;margin-bottom:10px}
@@ -85,3 +85,15 @@ html[data-theme="dark"] .reader-help {color:#a8bdcb}
 @media(max-width:1150px){.reader-toolbar {gap:9px}.reader-search-form {flex:1 1 100%;max-width:none}.reader-layout {grid-template-columns:235px minmax(0,1fr)}}
 @media(max-width:740px){.reader-header-actions {gap:9px}.reader-back span {display:none}.reader-hero {flex-direction:column;align-items:flex-start;gap:14px;padding:21px 0}.reader-hero h1 {font-size:clamp(28px,6vw,37px)}.reader-download {font-size:14px;padding:9px 13px}.reader-layout {grid-template-columns: minmax(0,1fr)}.reader-sidebar {position:static;max-height:450px;border-right:0;border-bottom:1px solid var(--line)}.reader-main {padding:12px 9px}.reader-scroller {padding:8px;min-height:500px;height:70vh}.reader-toolbar {padding:10px;gap:9px}.reader-zoom {margin-left:auto}.reader-page-label .page-label-fi {display:none}.reader-help {font-size:12px}}
 @media(max-width:500px){.reader-back {font-size:13px}.reader-hero p:not(.reader-kicker){font-size:13px}.reader-toolbar {gap:8px}.reader-tool {min-height:36px;padding:4px 8px;font-size:14px}.reader-step {font-size:23px;min-width:34px}.reader-paging {gap:4px}.reader-zoom {gap:3px}.reader-page-label{font-size:12px;margin-left:0}#reader-page {min-height:35px;width:48px;font-size:15px}.reader-total{font-size:12px}#reader-zoom-level{font-size:12px;min-width:57px}.reader-fit {font-size:12px}.reader-paper-meta {font-size:12px}.reader-page-actions button{font-size:12px;padding:5px 7px}.reader-download span{display:none}.reader-search-form input {font-size:14px}}
+
+/* Evidence passages are coloured transparent orange, independently of the
+   Helsinki-blue navigation. The highlighting toggle applies to any overlay. */
+.reader-highlight-toggle { background: #fff0df !important; border: 1px solid #cd771b !important; color: #864000 !important; }
+.reader-highlight-toggle:hover { background: #ffe3bd !important; }
+.reader-highlight-note { display: block; font-size: 13px; font-weight: 650; color: #855017; background: #fff5e9; border-left: 3px solid #e18b1c; margin: 0 3px 10px; padding: 8px 11px; }
+.reader-highlight-note span { font-weight: 450; }
+.reader-highlight-note[hidden], .reader-highlight-toggle[hidden] { display: none !important; }
+html[data-theme="dark"] .reader-highlight-toggle { background: #4f341f !important; border-color: #e7a154 !important; color: #ffd49a !important; }
+html[data-theme="dark"] .reader-highlight-toggle:hover { background: #634324 !important; }
+html[data-theme="dark"] .reader-highlight-note { background: #35281c; color: #ffdba6; border-left-color: #f4a544; }
+html[data-theme="dark"] .reader-highlight { background: rgba(255, 151, 25, .43); border-color: rgba(255, 187, 80, .52); }

@@ -185,7 +185,7 @@ The independent study interface adopts a white-dominant, black-and-blue visual s
 
 - A visible blue rule, book-title underline, author emphasis, PDF action, and blue chapter/chat accents provide more visual emphasis while keeping the overall interface spacious.
 - The **Show contents / Hide contents** button toggles the PDF chapter navigation. The preference persists in the browser.
-- Four **one-click sample questions**, two Finnish and two English, demonstrate core retrieval and translation features. Each button selects its language and sends the question immediately, except that a password-protected installation first asks for the access code.
+- Four **one-click sample questions**, randomly selected on each visit (two Finnish and two English, from 24 prompts), demonstrate core retrieval and translation features. Each button selects its language and sends the question immediately, except that a password-protected installation first asks for the access code.
 - The interface is responsive to mobile screens.
 
 To update an existing deployment without replacing the backend or the book, copy `templates/index.html`, `static/style.css`, and `static/app.js` from the UI-only ZIP into the same paths in the project's repository, then commit and push. No new environment variables or Python packages are required.
@@ -196,8 +196,8 @@ Use the **Dark mode** button in the header to switch from the default light
 Helsinki-inspired theme to a dark reading theme with blue highlights. In dark
 mode, the same button reads **Light mode**. The selection is remembered in
 that browser (`localStorage`); it does not affect the backend, Claude API,
-other visitors, or their preferences. The contents toggle and four bilingual
-example questions remain unchanged.
+other visitors, or their preferences. The contents toggle and bilingual
+example questions remain available.
 
 To add dark mode to an existing installation, replace only
 `templates/index.html`, `static/style.css`, and `static/app.js` and push to GitHub.
@@ -270,3 +270,25 @@ Source text selection is an extracted-text view, not a perfect pixel-aligned
 text overlay. Image quality depends on the device and zoom factor.
 
 No remote PDF.js/CDN, iframe, or special browser PDF capabilities are required.
+
+
+## Rotating question bank and cited-passage highlighting (October 2026)
+
+The chat welcome screen displays **four example questions in one row**: two
+Finnish and two English. On small screens, swipe the row sideways. Each new
+visit selects new questions from a bank of 12 Finnish + 12 English prompts;
+questions from the previous visit are excluded using browser localStorage.
+
+The tutor also asks Claude to identify 1–2 short **exact Finnish supporting
+passages** from the retrieved textbook excerpts for each cited page. These are
+checked against the original PDF before they can be used. When an exact match
+is available, a citation such as `[P41]` links to the custom reader with
+translucent orange highlighting at the matching passage. The reader can
+scroll directly to it and offers a **Hide highlights / Show highlights** toggle.
+The setting is remembered in the same browser. If no matching evidence quote
+was returned, the citation still opens the correct page, without a misleading
+highlight. The orange overlay does not alter the downloadable PDF.
+
+For existing deployments, see `THIS_UPDATE.md`. This update requires `app.py`
+plus frontend files (not just a UI-only replacement). It adds no dependencies
+or new environment variables.
