@@ -189,10 +189,8 @@
       event.preventDefault(); form.requestSubmit();
     }
   });
-  translationMode.addEventListener('change', () => {
-    if (translationMode.value === 'en') language.value = 'en';
-    if (translationMode.value === 'fi') language.value = 'fi';
-  });
+  // Reply language is an independent, user-controlled preference.
+  // Translation tasks can request an output language without changing this selector.
   clear.addEventListener('click', () => {
     history.length = 0;
     messages.querySelectorAll('.message').forEach(e => e.remove());
@@ -272,7 +270,8 @@
     if (!button) return;
     questionInput.value = button.dataset.question || '';
     translationMode.value = button.dataset.translation || 'none';
-    language.value = button.dataset.language || 'auto';
+    // The example prompt's language does not override the user's reply-language setting.
+    // With Automatic selected, the backend infers the language from this prompt.
     // One-click questions respect the access-code prompt.
     if (password && !password.value.trim()) password.focus();
     else if (!sendButton.disabled) form.requestSubmit();
