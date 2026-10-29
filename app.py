@@ -7,9 +7,12 @@ NOT written, operated or endorsed by the book's author or its publisher.
 from __future__ import annotations
 
 import base64
+import io
+from functools import lru_cache
 import json
 import hmac
 import logging
+import math
 import os
 import re
 from pathlib import Path
@@ -17,7 +20,7 @@ from pathlib import Path
 import anthropic
 import fitz
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, abort, jsonify, render_template, request, send_file
 
 from book_search import BookIndex, CHAPTERS, explicit_pages, glossary_expand, section_at
 
@@ -217,7 +220,7 @@ def verified_response(model_input: dict, excerpts: list[dict], language: str) ->
                           'I could not establish the answer from the retrieved passages. '
                           'Please narrow the question or specify a page number.')
 
-    sources = [{'page': p, 'section': section_at(p), 'url': f'/book.pdf#page={p}'}
+    sources = [{'page': p, 'section': section_at(p), 'url': f'/reader?page={p}'}
                for p in sorted(cited)]
     return {'category': category, 'book_answer': book_answer,
             'outside_answer': outside_answer, 'sources': sources}
@@ -259,15 +262,112 @@ def health():
                    model=MODEL, password_protected=bool(APP_PASSWORD))
 
 
+# Browser-independent HTML reader.  Old /book.pdf#page=N links remain usable:
+# the URL fragment is handled by the reader's JavaScript, not the browser plugin.
+@app.get('/reader')
 @app.get('/book.pdf')
-def open_book():
-    # This edition is CC BY 4.0, so the ORIGINAL book is publicly viewable.
-    # APP_PASSWORD, if set, protects API spending; it does not hide the open book.
+def book_reader():
+    return render_template('reader.html', chapters=CHAPTERS, pdf_pages=INDEX.page_count)
+
+
+@app.get('/book/original.pdf')
+def original_book():
+    # PDF bytes are an optional fallback; the reader itself never uses PDF plugins.
     response = send_file(BOOK_PATH, mimetype='application/pdf', as_attachment=False,
                          download_name='Kyselytutkimuksen-mittarit-ja-menetelmat-Vehkalahti-2019.pdf')
     response.headers['Cache-Control'] = 'public, max-age=3600'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     return response
+
+
+@app.get('/book/download')
+def download_book():
+    return send_file(BOOK_PATH, mimetype='application/pdf', as_attachment=True,
+                     download_name='Kyselytutkimuksen-mittarit-ja-menetelmat-Vehkalahti-2019.pdf')
+
+
+@lru_cache(maxsize=26)
+def _page_png(page_number: int, scale: float) -> bytes:
+    # Only one page is rasterised at a time. Output is browser-native PNG, not PDF.
+    with fitz.open(str(BOOK_PATH)) as doc:
+        pix = doc[page_number - 1].get_pixmap(
+            matrix=fitz.Matrix(scale, scale), colorspace=fitz.csRGB, alpha=False
+        )
+        return pix.tobytes('png')
+
+
+@app.get('/api/book/page/<int:page_number>.png')
+def book_page_image(page_number: int):
+    if not 1 <= page_number <= INDEX.page_count:
+        abort(404)
+    try:
+        resolution = float(request.args.get('scale', '2.5'))
+    except ValueError:
+        abort(400)
+    if not math.isfinite(resolution) or not 1 <= resolution <= 3.5:
+        abort(400)
+    # Quantising the DPI keeps the image cache efficient.
+    resolution = round(resolution * 2) / 2
+    result = send_file(io.BytesIO(_page_png(page_number, resolution)), mimetype='image/png',
+                       download_name=f'page-{page_number}.png')
+    result.headers['Cache-Control'] = 'public, max-age=86400'
+    result.headers['X-Content-Type-Options'] = 'nosniff'
+    return result
+
+
+@app.get('/api/book/text/<int:page_number>')
+def book_page_text(page_number: int):
+    if not 1 <= page_number <= INDEX.page_count:
+        abort(404)
+    # Text comes from the exact PDF, not generated or translated by AI.
+    return jsonify(page=page_number, text=INDEX.pages.get(page_number, ''))
+
+
+@app.get('/api/book/search')
+def book_search_pages():
+    q = ' '.join(request.args.get('q', '').split())[:100]
+    if len(q) < 2:
+        return jsonify(query=q, results=[], count=0)
+    needles = [x.casefold() for x in q.split() if len(x) > 1][:7]
+    matches = []
+    for page_num, content in INDEX.pages.items():
+        folded = content.casefold()
+        offsets = [folded.find(word) for word in needles]
+        found = [i for i in offsets if i >= 0]
+        if not found:
+            continue
+        count = sum(folded.count(word) for word in needles)
+        first = min(found)
+        start = max(first - 72, 0)
+        stop = min(first + 150, len(content))
+        snippet = ('…' if start else '') + content[start:stop].replace('\n', ' ').strip()
+        if stop < len(content):
+            snippet += '…'
+        matches.append({'page': page_num, 'score': count, 'snippet': snippet})
+    matches.sort(key=lambda hit: (-hit['score'], hit['page']))
+    return jsonify(query=q, results=matches[:70], count=len(matches))
+
+
+@app.get('/api/book/highlights/<int:page_number>')
+def book_highlights(page_number: int):
+    if not 1 <= page_number <= INDEX.page_count:
+        abort(404)
+    term = ' '.join(request.args.get('q', '').split())[:100]
+    if len(term) < 2:
+        return jsonify(page=page_number, boxes=[])
+    with fitz.open(str(BOOK_PATH)) as doc:
+        page = doc[page_number - 1]
+        words = [term] + [w for w in term.split() if len(w) >= 3]
+        boxes = []
+        for word in words:
+            for rect in page.search_for(word)[:30]:
+                boxes.append({'x': round(rect.x0 / page.rect.width * 100, 3),
+                              'y': round(rect.y0 / page.rect.height * 100, 3),
+                              'w': round(rect.width / page.rect.width * 100, 3),
+                              'h': round(rect.height / page.rect.height * 100, 3)})
+            if boxes:
+                break
+    return jsonify(page=page_number, boxes=boxes)
 
 
 @app.post('/api/ask')

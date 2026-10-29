@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Read Kimmo Vehkalahti's Kyselytutkimuksen mittarit ja menetelmät online, with reliable direct page links.">
+  <meta name="theme-color" content="#ffffff">
+  <title>Book reader · KyselyTutor · Kimmo Vehkalahti</title>
+  <script>try { if (localStorage.getItem('kyselytutor_theme_v1') === 'dark') {document.documentElement.dataset.theme = 'dark'; document.querySelector('meta[name="theme-color"]').content='#10171d';} } catch(_) {}</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='reader.css') }}">
+  <script defer src="{{ url_for('static', filename='reader.js') }}"></script>
+</head>
+<body class="reader-body" data-page-count="{{ pdf_pages }}">
+  <div class="reader-shell">
+    <header class="masthead reader-masthead">
+      <a class="brand" href="/" aria-label="KyselyTutor home"><span class="brand-mark" aria-hidden="true">K<span class="brand-mark-dot">.</span></span><span>KyselyTutor</span></a>
+      <div class="reader-header-actions">
+        <a class="reader-back" href="/">← Back to tutor <span>/ Palaa ohjaajaan</span></a>
+        <button class="theme-toggle" id="reader-theme" type="button" aria-pressed="false" aria-label="Switch to dark mode">
+          <svg class="theme-icon theme-icon-moon" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M20.8 13A9 9 0 0 1 11 3.2 9 9 0 1 0 20.8 13Z"/></svg>
+          <svg class="theme-icon theme-icon-sun" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <span id="reader-theme-label">Dark mode</span>
+        </button>
+      </div>
+    </header>
+    <div class="reader-hero">
+      <div>
+        <p class="reader-kicker">TEXTBOOK READER <span>/ KIRJAN LUKIJA</span></p>
+        <h1>Kyselytutkimuksen <span class="title-accent">mittarit ja menetelmät</span></h1>
+        <p>Original work by <strong>Kimmo Vehkalahti</strong> · University of Helsinki open-access PDF, 2019 · CC BY 4.0</p>
+      </div>
+      <a class="reader-download" href="/book/download" download>↓ Download PDF <span>/ Lataa</span></a>
+    </div>
+    <div class="reader-toolbar" role="toolbar" aria-label="Book reader controls">
+      <button id="reader-contents-toggle" type="button" class="reader-tool" aria-controls="reader-sidebar" aria-expanded="true">☰ <span>Contents</span></button>
+      <div class="reader-paging">
+        <button type="button" class="reader-tool reader-step" id="reader-prev" aria-label="Previous page" title="Previous page (left arrow)">‹</button>
+        <label class="reader-page-label" for="reader-page">Page <span class="page-label-fi">/ Sivu</span></label>
+        <input id="reader-page" type="number" inputmode="numeric" min="1" max="{{ pdf_pages }}" value="1" aria-label="Page number">
+        <span class="reader-total">/ {{ pdf_pages }}</span>
+        <button type="button" class="reader-tool reader-step" id="reader-next" aria-label="Next page" title="Next page (right arrow)">›</button>
+      </div>
+      <div class="reader-zoom">
+        <button type="button" class="reader-tool reader-step" id="reader-zoom-out" aria-label="Zoom out">−</button>
+        <span id="reader-zoom-level" aria-live="off">Fit width</span>
+        <button type="button" class="reader-tool reader-step" id="reader-zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" class="reader-tool reader-fit" id="reader-fit">Fit</button>
+      </div>
+      <form id="reader-search-form" class="reader-search-form" role="search" autocomplete="off">
+        <label class="sr-only" for="reader-search">Search the book</label>
+        <input id="reader-search" type="search" placeholder="Search book / Hae kirjasta…" maxlength="100">
+        <button type="submit">Search</button>
+      </form>
+    </div>
+    <div class="reader-layout" id="reader-layout">
+      <aside class="reader-sidebar" id="reader-sidebar" aria-label="Book contents and search results">
+        <div class="reader-sidebar-inner">
+          <section id="reader-chapters">
+            <h2>Contents <span>/ Sisällys</span></h2>
+            <p class="reader-sidebar-hint">Choose a chapter to jump to its page.</p>
+            <nav aria-label="Book chapters">
+              <a class="reader-chapter" data-page="1" href="/reader?page=1"><span>•</span><span>Cover &amp; opening pages</span><em>1</em></a>
+              {% for chapter in chapters %}
+              <a class="reader-chapter" data-page="{{ chapter.page }}" href="/reader?page={{ chapter.page }}"><span>{{ chapter.number }}</span><span><strong>{{ chapter.fi }}</strong><small>{{ chapter.en }}</small></span><em>{{ chapter.page }}</em></a>
+              {% endfor %}
+              <a class="reader-chapter" data-page="219" href="/reader?page=219"><span>•</span><span>Hakemisto / Index</span><em>219</em></a>
+            </nav>
+          </section>
+          <section id="reader-results" hidden aria-label="Search results">
+            <div class="reader-results-heading"><h2>Search results <span>/ Hakutulokset</span></h2><button type="button" id="reader-results-close" aria-label="Close search results">×</button></div>
+            <p id="reader-results-count" class="reader-sidebar-hint"></p>
+            <div id="reader-results-list"></div>
+          </section>
+        </div>
+      </aside>
+      <main class="reader-main" id="reader-main" aria-label="Book pages">
+        <div class="reader-paper-meta"><span id="reader-status" role="status" aria-live="polite">Opening the textbook…</span><div class="reader-page-actions"><button type="button" id="reader-text-toggle" aria-pressed="false">Show page text</button><button type="button" id="reader-copy" title="Copy a direct link to this page">Copy page link</button></div></div>
+        <div id="reader-scroller" class="reader-scroller">
+          <div class="reader-image-frame" id="reader-image-frame">
+            <img id="reader-image" src="" alt="" decoding="async">
+            <div class="reader-highlights" id="reader-highlights" aria-hidden="true"></div>
+          </div>
+          <div class="reader-page-text" id="reader-page-text" hidden>
+            <div class="reader-text-heading"><strong>Extracted page text <span>/ Sivun teksti</span></strong><button type="button" id="reader-copy-text">Copy text</button></div>
+            <pre id="reader-text-content"></pre>
+          </div>
+        </div>
+        <p class="reader-help">Tip: Use the ← → arrow keys for pages. Text view lets you select and copy Finnish text. Page links always open the reader, not a PDF plugin.</p>
+      </main>
+    </div>
+    <footer class="reader-footer">The original textbook is © <strong>Kimmo Vehkalahti</strong> and published under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. This independently developed tutor and reader are not endorsed by the author or the University of Helsinki. <a href="https://doi.org/10.31885/9789515149817" target="_blank" rel="noopener noreferrer">Book DOI</a>.</footer>
+  </div>
+</body>
+</html>

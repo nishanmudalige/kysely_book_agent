@@ -20,7 +20,7 @@ KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and
 - Can render PDF page images to Claude for questions explicitly about figures/tables (API vision usage may cost more).
 - Optionally uses an `APP_PASSWORD` to protect billable Claude chat requests. The open-licensed PDF is publicly accessible even when the chat is password protected.
 
-**Important page-number difference from the previous agent:** In this edition, the printed main-text page number **equals** the PDF viewer page number. A citation to p. 41 links to `/book.pdf#page=41`, **not** page 43.
+**Important page-number difference from the previous agent:** In this edition, the printed main-text page number **equals** the PDF viewer page number. A citation to p. 41 links to `/reader?page=41` (the cross-browser reader), **not** page 43.
 
 **Retrieval details:** The backend extracts and indexes text with PyMuPDF and a lightweight local BM25 implementation (no vector database, external index or separate OpenAI key). An English question is translated to Finnish search terms using Claude Haiku, with an offline glossary fallback. In the absence of a supported match the agent should avoid making a textbook-specific assertion. BM25 can miss related passages: verify answers against the cited original pages.
 
@@ -28,7 +28,7 @@ KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and
 
 | Path | Purpose |
 |---|---|
-| `app.py` | Flask routes, Claude API calls, language and answer-category handling, PDF viewer, citation checks |
+| `app.py` | Flask routes, Claude API calls, language and answer-category handling, HTML textbook reader, citation checks |
 | `book_search.py` | PDF text extraction, chapter information, bilingual glossary and local page-aware search |
 | `data/book.pdf` | Original open-access textbook by Kimmo Vehkalahti, CC BY 4.0 |
 | `templates/index.html` | Web interface, prominent title and attribution, chapter links |
@@ -72,7 +72,7 @@ KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and
    python app.py
    ```
 
-7. Open **http://127.0.0.1:5000/**. The original PDF is available at **http://127.0.0.1:5000/book.pdf**.
+7. Open **http://127.0.0.1:5000/**. The original textbook now opens in a **browser-independent HTML reader** at **http://127.0.0.1:5000/reader**. The separate PDF download is **http://127.0.0.1:5000/book/download**.
 
 > If you see `zsh: command not found: flask`, you do not need to invoke the `flask` executable. Use `python app.py` after activating `.venv`.
 
@@ -88,7 +88,7 @@ KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and
 8. Let Render deploy the service. Check these URLs after the service is live:
    - `https://YOUR-SERVICE.onrender.com/` — main chat
    - `https://YOUR-SERVICE.onrender.com/health` — index and model diagnostics
-   - `https://YOUR-SERVICE.onrender.com/book.pdf` — original book
+   - `https://YOUR-SERVICE.onrender.com/reader` — accessible HTML textbook reader, with direct page links such as `?page=41`
 9. If the first run fails, read **Render → Logs**. If your Claude key is later changed or revoked, set the updated `ANTHROPIC_API_KEY` in Render → Environment, then choose **Save, rebuild, and deploy** (or **Save and deploy** if dependencies haven't changed).
 
 `render.yaml` requests the service name `kysely-book-agent`; the actual URL is assigned by Render and depends on availability. You may choose a different name in your Render service settings if needed. Setting a custom domain requires control of that domain and DNS configuration.
@@ -138,3 +138,135 @@ python -m unittest discover -s tests -v
 ```
 
 They test page mapping, the author/copyright page, text extraction and representative retrieval. They do not call Anthropic. For a full application smoke test, use a real API key locally and confirm response category labels in the browser.
+
+## Refreshed interface — October 2026
+
+The interface now uses a simplified white/black layout with restrained blue accents,
+following the University of Helsinki's general colour guidance. **This is not an
+official University of Helsinki website or endorsed institutional branding.**
+
+- Open/close the **Contents / Sisällys** chapter panel using **Show contents** or
+  **Hide contents** immediately above the chat. The app remembers your preference
+  in the browser; the panel starts closed on small screens unless a preference
+  was already saved.
+- Open the book with the prominent **Read textbook / Avaa kirja** button.
+- The original author, **Kimmo Vehkalahti**, appears beneath the book title and
+  in the attribution footer.
+- Language and translation controls remain available above the message box;
+  the source-vs-outside-book classification and direct page links are unchanged.
+
+### Apply the update to an existing GitHub/Render deployment
+
+If you already have an operational copy of KyselyTutor, you can replace **only**:
+
+```
+templates/index.html
+static/style.css
+static/app.js
+```
+
+Then run these commands from the existing repository directory:
+
+```
+git add templates/index.html static/style.css static/app.js
+git commit -m "Simplify KyselyTutor interface and add contents toggle"
+git push origin main
+```
+
+Render should redeploy when it receives the new commit (if auto-deploy is enabled).
+You do not have to change the Anthropic API key, the backend code or the textbook.
+Never commit `.env`, API credentials, `.venv` or `.git` directories inside a ZIP.
+
+Original design inspiration: https://www.helsinki.fi/en/brand-book/colours
+
+## Interface update: Helsinki homepage-inspired blue accents (October 2026)
+
+The independent study interface adopts a white-dominant, black-and-blue visual style inspired by the University of Helsinki homepage and its [colour guidelines](https://www.helsinki.fi/en/brand-book/colours). It is not an official University of Helsinki website and does not use any university logo.
+
+- A visible blue rule, book-title underline, author emphasis, PDF action, and blue chapter/chat accents provide more visual emphasis while keeping the overall interface spacious.
+- The **Show contents / Hide contents** button toggles the PDF chapter navigation. The preference persists in the browser.
+- Four **one-click sample questions**, two Finnish and two English, demonstrate core retrieval and translation features. Each button selects its language and sends the question immediately, except that a password-protected installation first asks for the access code.
+- The interface is responsive to mobile screens.
+
+To update an existing deployment without replacing the backend or the book, copy `templates/index.html`, `static/style.css`, and `static/app.js` from the UI-only ZIP into the same paths in the project's repository, then commit and push. No new environment variables or Python packages are required.
+
+## Optional dark mode (October 2026)
+
+Use the **Dark mode** button in the header to switch from the default light
+Helsinki-inspired theme to a dark reading theme with blue highlights. In dark
+mode, the same button reads **Light mode**. The selection is remembered in
+that browser (`localStorage`); it does not affect the backend, Claude API,
+other visitors, or their preferences. The contents toggle and four bilingual
+example questions remain unchanged.
+
+To add dark mode to an existing installation, replace only
+`templates/index.html`, `static/style.css`, and `static/app.js` and push to GitHub.
+There are no new dependencies or environment variables.
+
+
+## New browser-independent textbook reader (October 2026)
+
+### Why this change was made
+
+Some browsers download an inline PDF instead of opening it, and their support
+for `#page=41` and other PDF fragment links differs. KyselyTutor therefore
+uses a **custom HTML reader** instead of a browser PDF plugin or remote PDF.js
+script. Each of the original PDF's 223 pages is rendered as a high-resolution
+**PNG on demand** by the server using the already-installed PyMuPDF library.
+The reader has no external JavaScript dependencies. This makes it usable in
+modern browsers that support standard HTML, JavaScript and PNG images.
+
+- The prominent **Read textbook / Avaa kirja** button opens `/reader`.
+- The AI's cited page links and chapter navigation now open `/reader?page=41`
+  (where the page number varies). These are ordinary shareable HTML page URLs.
+- Existing links using `/book.pdf#page=41` are supported: `/book.pdf` now serves
+  the HTML reader and its JavaScript interprets the old `#page` fragment.
+- Search the **original Finnish book** across all 223 pages, view page matches
+  and highlighted search terms, and jump directly to a result.
+- Use Previous/Next, direct page entry, zoom, fit width, and arrow keys.
+- Use **Show page text** to select/copy extracted Finnish text (the image above
+  retains the precise appearance of the original printed book).
+- The reader respects the same persisted light/dark setting and contents-panel
+  setting as the main KyselyTutor interface.
+- The original PDF has **not been altered** and is available explicitly using
+  the **Download PDF / Lataa** button at `/book/download`. If desired, the raw
+  PDF may also be viewed/downloaded at `/book/original.pdf`, but that fallback
+  still depends on the browser's PDF handling.
+
+### Apply to an existing GitHub / Render deployment
+
+This update **also changes Flask routes**. Replacing only the three former UI
+files is insufficient. Copy the following files from the reader update ZIP
+into the matching paths of your repository (keep your own `.env` untouched):
+
+```text
+app.py
+templates/index.html
+templates/reader.html    (new)
+static/app.js
+static/reader.css       (new)
+static/reader.js        (new)
+tests/test_reader.py    (new; optional test file)
+```
+
+Then in Terminal from your existing project directory:
+
+```bash
+git add app.py templates/index.html templates/reader.html static/app.js static/reader.css static/reader.js tests/test_reader.py
+git commit -m "Add cross-browser textbook reader and reliable page links"
+git push origin main
+```
+
+Render normally redeploys automatically if auto-deploy is enabled. No new
+Claude API settings, Python packages, or environment variables are required.
+If working locally, stop the old server and start it again using `python app.py`.
+
+### Verification
+
+Run `python -m unittest discover -s tests -v` from the project root.
+Directly check `/reader?page=41`, `/reader?page=93`, `/reader?page=223`,
+`/book.pdf#page=116`, `/api/book/search?q=validiteetti`, and `/book/download`.
+Source text selection is an extracted-text view, not a perfect pixel-aligned
+text overlay. Image quality depends on the device and zoom factor.
+
+No remote PDF.js/CDN, iframe, or special browser PDF capabilities are required.

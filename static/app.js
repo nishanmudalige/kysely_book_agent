@@ -15,6 +15,33 @@
   const tocPanel = document.getElementById('contents-panel');
   const grid = document.getElementById('main-grid');
   const TOC_STORAGE_KEY = 'kyselytutor_contents_open_v2';
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeLabel = document.getElementById('theme-toggle-label');
+  const THEME_STORAGE_KEY = 'kyselytutor_theme_v1';
+
+  function applyTheme(mode, persist = true) {
+    const dark = mode === 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    if (themeToggle) {
+      themeToggle.setAttribute('aria-pressed', String(dark));
+      const description = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      themeToggle.setAttribute('aria-label', description);
+      themeToggle.title = description;
+    }
+    if (themeLabel) themeLabel.textContent = dark ? 'Light mode' : 'Dark mode';
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.content = dark ? '#10171d' : '#ffffff';
+    if (persist) {
+      try { localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light'); } catch (_) {}
+    }
+  }
+  applyTheme(document.documentElement.dataset.theme, false);
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
+  }
+
 
   function setContentsVisible(open, persist = true) {
     if (!tocPanel || !tocToggle || !grid) return;
@@ -59,7 +86,7 @@
     // Server has already validated source-page numbers. Convert only known tags.
     const byPage = Object.fromEntries((sources || []).map(s => [String(s.page), s]));
     const sourceLinks = text.replace(/\[P(\d{1,3})\]/g, (full, n) => {
-      return byPage[n] ? `[p. ${n}](/book.pdf#page=${n})` : full;
+      return byPage[n] ? `[p. ${n}](/reader?page=${n})` : full;
     });
     if (!window.marked || !window.DOMPurify) {
       return el('p', '', sourceLinks);

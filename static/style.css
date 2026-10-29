@@ -326,3 +326,96 @@ textarea:focus-visible { outline: 0; }
   .welcome > p:not(.welcome-kicker) { font-size: 15px; }
   .suggestion { min-height: 72px; }
 }
+
+
+/* Colour-mode control: manual light/dark selection persisted in localStorage.
+   A darker reading surface and light, high-contrast Helsinki-style blue accents. */
+.masthead-actions { display: flex; align-items: center; gap: 20px; }
+.theme-toggle {
+  display: inline-flex; justify-content: center; align-items: center; gap: 9px;
+  min-height: 42px; padding: 9px 13px; border: 1px solid #adc2cf;
+  border-radius: 4px; background: var(--white); color: var(--ink);
+  font-size: 14px; font-weight: 700; white-space: nowrap;
+}
+.theme-toggle:hover { border-color: var(--blue); background: var(--blue-tint); color: var(--blue-dark); }
+.theme-toggle .theme-icon { flex-shrink: 0; }
+.theme-icon-sun { display: none; }
+html[data-theme="dark"] .theme-icon-moon { display: none; }
+html[data-theme="dark"] .theme-icon-sun { display: block; }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #eef4f8;
+  --muted: #bdcbd5;
+  --subtle: #a5b6c2;
+  --blue: #65c9f1;
+  --blue-hover: #9ae3ff;
+  --blue-dark: #8fddfa;
+  --blue-tint: #1b3545;
+  --blue-border: #5b92ac;
+  --white: #10171d;
+  --surface: #18242d;
+  --line: #354650;
+}
+html[data-theme="dark"] .masthead { border-top-color: #4cb4df; }
+html[data-theme="dark"] .brand-mark { color: #fff; background: #086f98; border-color: #086f98; }
+html[data-theme="dark"] .brand-mark-dot { color: #fff; }
+html[data-theme="dark"] .eyebrow span { color: #a4b6bf; }
+html[data-theme="dark"] .author-line { color: var(--muted); }
+html[data-theme="dark"] .title-accent { text-decoration-color: #65c9f1; }
+html[data-theme="dark"] .pdf-link,
+html[data-theme="dark"] #send { color: #fff; background: #086b93; }
+html[data-theme="dark"] .pdf-link { box-shadow: 0 3px 0 #043b53; }
+html[data-theme="dark"] .pdf-link:hover,
+html[data-theme="dark"] #send:hover { color: #fff; background: #0b84b1; }
+html[data-theme="dark"] .pdf-link:hover { box-shadow: 0 3px 0 #054b64; }
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .toc-toggle { color: var(--ink); background: #1a2c37; border-color: #4e859d; }
+html[data-theme="dark"] .theme-toggle:hover,
+html[data-theme="dark"] .toc-toggle:hover,
+html[data-theme="dark"] .toc-toggle[aria-expanded="true"] { color: #e4f6ff; background: #24485c; border-color: #6bc5eb; }
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .chat-panel,
+html[data-theme="dark"] .composer { background: #15212a; }
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .chat-panel { border-top-color: #55b7e0; }
+html[data-theme="dark"] .chat-messages { background: #121d25; scrollbar-color: #637989 transparent; }
+html[data-theme="dark"] .chapter { border-top-color: #30414d; }
+html[data-theme="dark"] .chapter:hover { background: #213a4a; }
+html[data-theme="dark"] .chapter-no { background: #244356; }
+html[data-theme="dark"] .clear-button { background: #1c2d37; color: var(--ink); border-color: #597181; }
+html[data-theme="dark"] .clear-button:hover { background: #2a4250; }
+html[data-theme="dark"] .suggestion { background: #192c38; border-color: #4b7286; border-left-color: #68c9f1; color: var(--ink); }
+html[data-theme="dark"] .suggestion:hover { background: #254455; border-color: #7bc9eb; }
+html[data-theme="dark"] .suggestion-lang { color: #bcf0ff !important; background: #234b62; }
+html[data-theme="dark"] .suggestion-arrow { color: #8ad8f6 !important; }
+html[data-theme="dark"] .message.bot { color: var(--ink); background: #192b37; border-color: #446074; border-left-color: #58b9e2; }
+html[data-theme="dark"] .message.user { color: var(--ink); background: #1b4860; }
+html[data-theme="dark"] .message.bot.error { color: #ffd5d5; border-color: #a76464; background: #392629; }
+html[data-theme="dark"] .message td,
+html[data-theme="dark"] .message th { border-color: #577080; }
+html[data-theme="dark"] .message pre,
+html[data-theme="dark"] .message code { color: var(--ink); background: #10202b; }
+html[data-theme="dark"] .message pre code { background: transparent; }
+html[data-theme="dark"] .message blockquote { color: var(--muted); }
+html[data-theme="dark"] .provenance { color: #b8ecff; background: #224357; border-color: #65c9f1; }
+html[data-theme="dark"] .provenance.outside { color: #e0e9ef; background: #34434e; border-color: #97a8b5; }
+html[data-theme="dark"] .provenance.scope { color: #e0e9ef; background: #34434e; border-color: #abb8c2; }
+html[data-theme="dark"] .page-link { color: #b9efff; background: #23465a; border-color: #537f99; }
+html[data-theme="dark"] .page-link:hover { color: #fff; background: #2b617a; }
+html[data-theme="dark"] .composer { border-top-color: #3f7891; }
+html[data-theme="dark"] .settings-row label { color: var(--ink); }
+html[data-theme="dark"] .settings-row select,
+html[data-theme="dark"] .password-row input { background: #1c2e3a; border-color: #5b7889; color: var(--ink); }
+html[data-theme="dark"] .input-row { background: #162732; border-color: #638294; }
+html[data-theme="dark"] .input-row:focus-within { border-color: #71d3fa; box-shadow: 0 0 0 3px #65c9f122; }
+html[data-theme="dark"] textarea::placeholder { color: #aabecb; }
+html[data-theme="dark"] .welcome-kicker span { color: #93b9ca; }
+
+@media (max-width: 760px) {
+  .masthead-actions { gap: 10px; }
+  .theme-toggle { min-height: 40px; padding: 8px 11px; }
+}
+@media (max-width: 530px) {
+  .theme-toggle { font-size: 13px; gap: 7px; padding: 8px 10px; }
+}

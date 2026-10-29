@@ -1,0 +1,35 @@
+KyselyTutor — universal HTML textbook reader update
+
+Open the book at /reader?page=41. All chapter and AI source citations now use
+this browser-independent reader. Old /book.pdf#page=41 links also work.
+
+To update your existing repository (without changing the Claude API key), copy:
+
+  app.py
+  templates/index.html
+  templates/reader.html
+  static/app.js
+  static/reader.css
+  static/reader.js
+  tests/test_reader.py        (optional but recommended)
+
+Then run in Terminal, from your existing project directory:
+
+  git add app.py templates/index.html templates/reader.html static/app.js static/reader.css static/reader.js tests/test_reader.py
+  git commit -m "Add cross-browser reader with reliable page links"
+  git push origin main
+
+To run locally:
+
+  source .venv/bin/activate
+  python -m unittest discover -s tests -v
+  python app.py
+
+Open http://127.0.0.1:5000/reader?page=41
+
+The original PDF is still available using the Download PDF button. The reader
+renders pages to HTML/PNG on the server; it does not require a browser's PDF
+plugin and needs no new Python dependencies.
+
+Author and copyright acknowledgement: Kimmo Vehkalahti.
+The original book is CC BY 4.0.
