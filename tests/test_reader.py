@@ -2,6 +2,7 @@
 import io
 import json
 import unittest
+from urllib.parse import parse_qs, urlsplit
 
 import fitz
 from app import app, INDEX, verified_response
@@ -75,7 +76,12 @@ class TestReader(unittest.TestCase):
         result = verified_response({'category': 'book', 'book_answer': 'Source [P41].',
                                     'referenced_pages': [41]},
                                    [{'page': 41, 'text': 'Validiteetti', 'section': '2.4.1'}], 'en')
-        self.assertEqual(result['sources'][0]['url'], '/reader?page=41')
+        # Reader URLs may include passage IDs (e.g., &b=s0) for orange highlights.
+        # Check the destination page without discarding valid evidence selectors.
+        url = urlsplit(result['sources'][0]['url'])
+        self.assertEqual(url.path, '/reader')
+        self.assertEqual(parse_qs(url.query).get('page'), ['41'])
+        self.assertEqual(url.fragment, '')
 
 
 if __name__ == '__main__':

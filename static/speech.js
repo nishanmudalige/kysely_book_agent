@@ -34,6 +34,9 @@
   let voices = [];
   let requestedLanguage = reader ? 'fi' : 'en';
   let autoVoice = true;
+  // The default is Flo (fi-FI) when the browser makes it available. A visitor
+  // who chooses any voice (including Automatic) keeps their explicit choice.
+  let userSelectedVoice = false;
   let selectionDelay = null;
 
   const FINNISH_WORDS = new Set('ja on ovat oli olivat että se tämä nämä myös mutta kuin missä mikä mitä miten miksi milloin voiko voidaan jos jota jotka jonka tämä siitä sillä koska sekä esimerkiksi kirjan kirja kirjassa kysely kyselytutkimus aineisto aineiston muuttuja mittari mittaus menetelmä tutkimus tutkija vastaaja usein siihen niistä ei voi olla ole ovat tehdään näin siis näiden niiden voidaan'.split(' '));
@@ -95,6 +98,12 @@
     if (voice.default) score += 2;
     return score;
   }
+  function isFloFinnish(voice) {
+    return /^fi-fi$/i.test((voice.lang || '').trim()) && /^flo(?:\b|\s|[-(])/i.test((voice.name || '').trim());
+  }
+  function defaultFloVoice() {
+    return voices.find(isFloFinnish) || null;
+  }
   function voiceFor(lang) {
     const available = voices.filter(v => (v.lang || '').toLowerCase().startsWith(lang));
     const preferred = voiceList.value;
@@ -121,8 +130,16 @@
       option.textContent = `${v.name} (${v.lang})`;
       voiceList.appendChild(option);
     });
-    if (previous && [...voiceList.options].some(o => o.value === previous)) voiceList.value = previous;
-    else if (autoVoice) voiceList.value = '';
+    const present = value => [...voiceList.options].some(o => o.value === value);
+    // Browsers often populate their voice list asynchronously. Flo becomes the
+    // default when it arrives, but never overrides an explicit visitor choice.
+    if (userSelectedVoice) {
+      voiceList.value = previous && present(previous) ? previous : '';
+    } else {
+      const flo = defaultFloVoice();
+      voiceList.value = flo && present(flo.voiceURI) ? flo.voiceURI : '';
+    }
+    autoVoice = !voiceList.value;
     updateVoiceWarning();
   }
   function updateVoiceWarning() {
@@ -307,7 +324,7 @@
   stopButton.addEventListener('click', () => {halt();index=0;displayState();});
   closeButton.addEventListener('click', () => {halt();panel.hidden=true;trigger?.setAttribute('aria-expanded','false');});
   rate.addEventListener('change', () => { if (playing) jump(index); });
-  voiceList.addEventListener('change', () => {autoVoice = !voiceList.value;if (playing) jump(index);});
+  voiceList.addEventListener('change', () => {userSelectedVoice = true;autoVoice = !voiceList.value;if (playing) jump(index);});
   window.addEventListener('pagehide', () => halt());
   document.addEventListener('kysely:pagechange', () => {
     halt(true);selectedText='';hideFloating();
