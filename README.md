@@ -1,328 +1,165 @@
-# KyselyTutor — bilingual Claude tutor for Kimmo Vehkalahti's textbook
+# KyselyTutor
 
-**Textbook:** Kimmo Vehkalahti, *Kyselytutkimuksen mittarit ja menetelmät*. The PDF was published by the **University of Helsinki in 2019** and reproduces the **2014 Finn Lectura** printed edition.
+**Bilingual Finnish–English AI study companion for** *Kyselytutkimuksen mittarit ja menetelmät* **by Kimmo Vehkalahti**.
 
-**Author and copyright:** © **Kimmo Vehkalahti**. **Original book licence:** [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/). [DOI: 10.31885/9789515149817](https://doi.org/10.31885/9789515149817). The original PDF is included in `data/book.pdf` under that licence. Keep the author's name, book title, publication details and licence notice intact when distributing this project.
+KyselyTutor is an independent Flask application powered by Anthropic Claude. It searches the original Finnish textbook, answers questions in Finnish or English, translates book passages, and opens citations in a custom cross-browser book reader. It also offers read-aloud controls and a small, clearly labelled Finnish-culture personality.
 
-> **Independent AI assistant:** KyselyTutor and any AI-generated translations or explanations are not produced, approved or endorsed by Kimmo Vehkalahti, Finn Lectura or the University of Helsinki.
+> **Textbook attribution:** © Kimmo Vehkalahti. The University of Helsinki published the open-access PDF in 2019; its content corresponds to the 2014 Finn Lectura printed edition. PDF ISBN 978-951-51-4981-7. [DOI: 10.31885/9789515149817](https://doi.org/10.31885/9789515149817). **The original textbook is licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** and is included at `data/book.pdf`. Preserve its attribution and licence notice.
+>
+> **Independence:** KyselyTutor, its AI-generated explanations and translations, and its University of Helsinki–inspired colour scheme are **not affiliated with, authored, approved, or endorsed by** Kimmo Vehkalahti, the University of Helsinki, Finn Lectura, Jokerit, Liiga, or the NHL. The original textbook is not an official English translation.
 
-KyselyTutor uses **Claude Sonnet 5.5** with structured JSON output to answer and translate, and optionally **Claude Haiku 5.5** to generate Finnish search keywords from English questions. It is deliberately modeled on the earlier `tilasto_book_agent_claude.zip` project: Flask, a Render deployment option, local searchable PDF text, clickable book citations, and a bilingual interface.
+## Features at a glance
 
-## Read aloud / Ääneenluku (Finnish and English)
+- **Book-based help:** Finnish and English questions, local textbook retrieval, page citations, explanations of tables/figures when a page image is supplied to Claude, and unofficial Finnish-to-English translation.
+- **Clear evidence labels:** green for **From the textbook**, orange for **Related — outside the textbook**, and red for genuinely unrelated questions. Mixed answers separate supported passages from supplementary AI knowledge.
+- **Custom textbook reader:** opens at `/reader` rather than relying on a browser PDF plug-in; offers page links, search, contents, zoom, page text and a separate PDF download.
+- **Supporting-text highlights:** translucent orange marks relevant original Finnish passages for cited answers. The reader can **Show/Hide highlights**; highlighting is relevant-context matching, not guaranteed sentence-level quotation alignment.
+- **Read aloud:** selected answer or extracted book text, whole reader page, or highlighted evidence; automatic Finnish/English detection with playback controls. **Flo (fi-FI)** is preferred for Finnish *when offered by the browser*; English uses an English voice.
+- **Accessible layout:** university-inspired black/white/blue palette, light/dark toggle, collapsible table of contents, larger fonts, and mobile layout.
+- **Rotating questions:** four prompts displayed in a horizontal row (two Finnish, two English) chosen from a bank of 24; selection avoids the previous set.
+- **Optional personality:** Finnish statisticians (especially Seppo Mustonen), Finnish history, geography, and hockey. The tutor's playful favourite is **Helsingin Jokerit**, but official Liiga standings take precedence for ranking questions.
 
-- In **Claude answers**, select a phrase or paragraph with the mouse or keyboard and use the floating **Read selection / Lue valittu** action. Alternatively, select **Read aloud** in the chat heading to hear the most recent answer.
-- In the **HTML textbook reader**, select **Show page text** to select and listen to an excerpt from the original Finnish text. **Read aloud** reads the whole current page. A citation displaying orange evidence highlights also provides **Read highlighted text** to speak the related Finnish passages directly.
-- The compact player has **Play / Resume, Pause, Rewind to beginning, Previous sentence, Next sentence, Stop**, and **Speed (0.8×–1.5×)**, plus a list of installed voices. The player opens only when requested and works with dark mode/mobile layouts.
-- Speech automatically detects **Finnish vs English** (including sentence by sentence). It favours enhanced/natural voices exposed by the browser. The chat's **Reply language: Automatic / Automaattinen** selector is unaffected.
-- **No extra API key or server TTS dependency.** Speech uses the browser Web Speech API, so exact voice naturalness, Finnish voice availability, and audio rendering depend on the visitor's browser, operating system and downloaded voices. Some devices require installing a higher-quality Finnish system voice; an unavailable voice cannot be guaranteed by this package. Browser/OS speech engines may handle synthesis locally or via their providers.
-- The book is rendered as images for reliable cross-browser display; for manual text selection, use **Show page text**, rather than trying to select pixels directly from the page image.
+**The textbook remains the primary purpose of this project.** Biography, history, geography, and hockey replies have separate non-book labels; they are not represented as textbook quotations.
 
-## What the agent does
+For detailed feature behaviour, architecture, limitations, maintenance, and troubleshooting, see **[docs/OPERATIONS_AND_FEATURES.md](docs/OPERATIONS_AND_FEATURES.md)**.
 
-- Understands **Finnish or English** questions, with **automatic, Finnish or English** answer-language selection.
-- Answers *using the original book*, giving clickable **PDF page references** when supported by retrieved passages.
-- Translates passages and requested pages of the Finnish book into **English**, preserving numerical and statistical meaning. These are unofficial, AI-generated translations.
-- Accepts questions about *related* topics not substantiated by the textbook. They are explicitly labelled **“Related — outside the textbook / Aiheeseen liittyvä — ei kirjasta”** and identified as general AI knowledge, **not live web research**.
-- Labels irrelevant questions **“Not relevant to this textbook / Ei liity kirjan aihepiiriin”** and explains the boundary instead of pretending the book covers them.
-- Separates book-supported and general-knowledge content into different sections when a response uses both.
-- Uses **green** source labels for textbook-supported explanations, **orange** for related information outside the book, and **red** for unrelated requests, in both light and dark mode.
-- Includes a prominent link **“Open the textbook PDF / Avaa PDF”** and a chapter navigator.
-- Can render PDF page images to Claude for questions explicitly about figures/tables (API vision usage may cost more).
-- Optionally uses an `APP_PASSWORD` to protect billable Claude chat requests. The open-licensed PDF is publicly accessible even when the chat is password protected.
+## 1. Quick start: run locally (macOS)
 
-**Important page-number difference from the previous agent:** In this edition, the printed main-text page number **equals** the PDF viewer page number. A citation to p. 41 links to `/reader?page=41` (the cross-browser reader), **not** page 43.
+Install Python 3.12 or another version compatible with `requirements.txt`. From Terminal, enter the extracted project root—the directory containing `app.py` and `requirements.txt`:
 
-**Retrieval details:** The backend extracts and indexes text with PyMuPDF and a lightweight local BM25 implementation (no vector database, external index or separate OpenAI key). An English question is translated to Finnish search terms using Claude Haiku, with an offline glossary fallback. In the absence of a supported match the agent should avoid making a textbook-specific assertion. BM25 can miss related passages: verify answers against the cited original pages.
+```bash
+cd ~/Downloads/kysely_book_agent
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cp .env.example .env
+open -e .env
+```
 
-## Files
+Edit `.env` to provide your own Anthropic API key and, if desired, a shared access password:
 
-| Path | Purpose |
+```dotenv
+ANTHROPIC_API_KEY=your-real-anthropic-api-key
+ANTHROPIC_MODEL=claude-sonnet-5-5
+ANTHROPIC_SEARCH_MODEL=claude-haiku-5-5
+APP_PASSWORD=choose-a-password
+FLASK_SECRET_KEY=choose-a-long-random-value
+```
+
+The model IDs are application defaults; your Anthropic account must have access to the configured models. API usage is billed separately from a Claude chat subscription. Keep `.env` out of Git.
+
+Start the server:
+
+```bash
+python app.py
+```
+
+Open the following local addresses:
+
+| Address | Purpose |
 |---|---|
-| `app.py` | Flask routes, Claude API calls, language and answer-category handling, HTML textbook reader, citation checks |
-| `book_search.py` | PDF text extraction, chapter information, bilingual glossary and local page-aware search |
-| `data/book.pdf` | Original open-access textbook by Kimmo Vehkalahti, CC BY 4.0 |
-| `templates/index.html` | Web interface, prominent title and attribution, chapter links |
-| `static/style.css` | Responsive website styling |
-| `static/app.js` | Browser chat controls, provenance labels, citation links, Markdown and math formatting |
-| `static/speech.js`, `static/speech.css` | Finnish–English speech synthesis, voice selection, media controls, and read-selection UI |
-| `.env.example` | Example environment variables; do not commit real API keys |
-| `render.yaml` | Render Blueprint deployment settings |
-| `tests/test_retrieval.py` | Source-PDF and local index tests |
+| `http://127.0.0.1:5000/` | Chat interface |
+| `http://127.0.0.1:5000/reader?page=41` | Original book, page 41 |
+| `http://127.0.0.1:5000/book/download` | Download the original PDF |
+| `http://127.0.0.1:5000/health` | Basic service and index diagnostics |
 
-## 1. Run locally on a Mac
+To stop the server, press **Control+C**. On subsequent local runs, `source .venv/bin/activate` and `python app.py` are sufficient. The `flask` shell command is **not** needed.
 
-1. Extract the ZIP. Open **Terminal** and change to the project folder. For example:
+## 2. Deploy with GitHub and Render
 
-   ```bash
-   cd ~/Downloads/kysely_book_agent
-   ```
+1. Create an empty GitHub repository (for example, `kysely-book-agent`) and commit the **contents** of the `kysely_book_agent` project directory. Keep `data/book.pdf`; do **not** commit `.env`, `.venv`, API keys, or passwords.
+2. In [Render](https://dashboard.render.com/), choose **New → Blueprint**, connect the repository, and use the included `render.yaml`. The Blueprint requests a Python web service named `kysely-book-agent`; its exact public URL depends on Render.
+3. Set `ANTHROPIC_API_KEY` and preferably `APP_PASSWORD` in Render's **Environment** settings. The Blueprint configures the model names and generates `FLASK_SECRET_KEY`.
+4. Deploy; then visit `/`, `/health`, and `/reader?page=41` on the assigned Render URL. Check **Render → Logs** if startup or a Claude request fails.
 
-2. Create a Python virtual environment, activate it and install dependencies:
+For a manually created Render Web Service, use:
 
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   python -m pip install --upgrade pip
-   python -m pip install -r requirements.txt
-   ```
+```text
+Build command: pip install -r requirements.txt
+Start command: gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT
+```
 
-3. Create your local `.env` file and edit it:
+**Important security/cost note:** A blank `APP_PASSWORD` permits anyone who can reach the URL to make billable Claude chat requests. The shared password is simple access gating, **not** full authentication, rate limiting, or institutional single sign-on. The original open-licensed book and reader are publicly accessible independently of chat protection. For substantial public usage, add rate limits, monitoring and stronger authentication.
 
-   ```bash
-   cp .env.example .env
-   open -e .env
-   ```
+### Subsequent code or documentation updates
 
-4. Set `ANTHROPIC_API_KEY` to a **valid Anthropic API key** from the [Anthropic Console](https://console.anthropic.com/). A normal Claude web-chat subscription does *not* automatically include Claude API credits. The default model names are `claude-sonnet-5-5` and `claude-haiku-5-5`; make sure your account has access to both.
+From the existing cloned project, after replacing the relevant files:
 
-5. Set `APP_PASSWORD` to a password of your choosing, or leave it empty **only** if you intentionally want public chat access. For local use, either is fine.
+```bash
+git add README.md docs/OPERATIONS_AND_FEATURES.md
+git commit -m "Consolidate KyselyTutor documentation"
+git push origin main
+```
 
-6. Run:
+Those commands update **documentation only**. To deploy changed application files instead, stage the files you actually changed; `git status` helps review them. Do not reapply old feature-update ZIPs to a newer version: they contain overlapping files and can undo later improvements. Auto-deploy, if enabled, normally rebuilds the service on a push.
 
-   ```bash
-   python app.py
-   ```
+## 3. Using KyselyTutor
 
-7. Open **http://127.0.0.1:5000/**. The original textbook now opens in a **browser-independent HTML reader** at **http://127.0.0.1:5000/reader**. The separate PDF download is **http://127.0.0.1:5000/book/download**.
+**Reply language** defaults to **Automatic / Automaattinen** and stays there until the visitor explicitly changes it. Selecting an example question or translation task **does not alter** the reply-language dropdown. English and Finnish can be selected manually.
 
-> If you see `zsh: command not found: flask`, you do not need to invoke the `flask` executable. Use `python app.py` after activating `.venv`.
+- **Ask about the book:** e.g. `Miten validiteetti ja reliabiliteetti eroavat toisistaan?` or `What does the book say about factor analysis?`. Click a source page link to open the cited page in the HTML reader.
+- **Translate:** choose a translation task and request a specified page or passage. The answer is generated by Claude, not by the author of the book.
+- **Read evidence:** citation links can contain identifiers such as `/reader?page=41&b=s0&b=s3`; these point to relevant Finnish paragraphs. Toggle orange marks on/off in the reader. Old `?h=` links remain supported.
+- **Listen:** select text in an answer and use **Read selection**. In the reader, choose **Show page text** to select extractable text, **Read aloud** for the current page, or **Read highlighted text** for citation evidence.
+- **Explore optional topics:** ask about Mustonen, Survo, Finnish history or geography, or the NHL/Jokerit. Such answers are labelled as supplementary knowledge, not textbook content.
 
-## 2. Deploy to Render using GitHub
+## 4. Answer labels
 
-1. Create a new GitHub repository, such as **`kysely-book-agent`**, preferably private until you have tested it.
-2. Upload the **contents inside** the extracted `kysely_book_agent` folder to the **root** of the repository. GitHub should show `app.py`, `book_search.py`, `render.yaml`, `requirements.txt`, `templates/`, `static/` and `data/book.pdf` at the root.
-3. Never upload `.env`, your Claude API key or other passwords to GitHub. `.gitignore` is included for this reason.
-4. Log in to [Render](https://dashboard.render.com/) and select **New → Blueprint**. Connect the new GitHub repository and approve the settings in `render.yaml`. (Alternatively, create **New → Web Service**, Python 3, build command `pip install -r requirements.txt`, start command `gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT`.)
-5. In Render's Environment settings, set **`ANTHROPIC_API_KEY`** to the new valid key. The Blueprint already defines the default Claude model IDs.
-6. Set **`APP_PASSWORD`** to a strong access code. This is especially important if the Render URL is public because *you* pay for other users' Claude API requests. Leaving it empty means **any visitor can use the chatbot**, and may incur API charges. The PDF remains freely available.
-7. If using the Blueprint, `FLASK_SECRET_KEY` is generated for you automatically. The app does not currently require signed login sessions, but you may retain this value for future updates.
-8. Let Render deploy the service. Check these URLs after the service is live:
-   - `https://YOUR-SERVICE.onrender.com/` — main chat
-   - `https://YOUR-SERVICE.onrender.com/health` — index and model diagnostics
-   - `https://YOUR-SERVICE.onrender.com/reader` — accessible HTML textbook reader, with direct page links such as `?page=41`
-9. If the first run fails, read **Render → Logs**. If your Claude key is later changed or revoked, set the updated `ANTHROPIC_API_KEY` in Render → Environment, then choose **Save, rebuild, and deploy** (or **Save and deploy** if dependencies haven't changed).
-
-`render.yaml` requests the service name `kysely-book-agent`; the actual URL is assigned by Render and depends on availability. You may choose a different name in your Render service settings if needed. Setting a custom domain requires control of that domain and DNS configuration.
-
-## 3. Test questions
-
-| Language / Purpose | Example |
+| Colour | Label / meaning |
 |---|---|
-| Finnish — in book | `Mitä kirjassa kerrotaan validiteetista ja reliabiliteetista?` |
-| English — in book | `Explain the measurement model and which chapter covers it.` |
-| English — in book | `Where does Vehkalahti discuss factor analysis?` |
-| Finnish — in book | `Mitä regressiodiagnostiikalla tarkoitetaan?` |
-| Translation | Choose **Translate book text → English**, then ask `Translate page 41 into English.` |
-| Figure | `Explain Figure 2.1 on page 21 in English.` |
-| Related but outside | `How would I implement an online Qualtrics survey in 2026?` — should be marked related but *outside the retrieved book text*. |
-| Clearly out of scope | `Who won yesterday's football game?` — should be labelled out of scope. |
+| Green | **From the textbook / Kirjasta:** supported by retrieved passages and cited pages. |
+| Orange | **Related — outside the textbook:** relevant statistics/survey material not established by retrieved excerpts. |
+| Purple | **Finnish statisticians:** external background, particularly Mustonen, Tarkkonen, Puntanen and Vehkalahti. |
+| Blue | **Finnish history:** outside-book background. |
+| Teal | **Finnish geography:** outside-book background. |
+| Slate blue | **Hockey corner:** Jokerit, Liiga and Finnish NHL players; outside the book. |
+| Red | **Not relevant to this textbook:** unrelated questions that do not fall within a supported personality category. |
 
-Answers containing outside-of-book information are explicitly separated and labelled. In mixed answers, book facts have citations, while outside knowledge is clearly distinguished.
+A mixed academic answer may show a **green** section and a separate **orange** section. Topic colours help identify origin and scope; they are not a guarantee of factual accuracy.
 
-## 4. Settings
+## 5. Tests
 
-`.env` variables or Render Environment entries:
-
-| Variable | Default | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | *(required)* | Anthropic API secret. Never put it in the browser or GitHub. |
-| `ANTHROPIC_MODEL` | `claude-sonnet-5-5` | Model that writes the final answer. |
-| `ANTHROPIC_SEARCH_MODEL` | `claude-haiku-5-5` | Model that converts English query terms to Finnish. |
-| `APP_PASSWORD` | empty | Optional shared access code for chat; blank makes API usage public. |
-| `TOP_K` | `9` | Number of short source passages sent to Claude. |
-| `MAX_TOKENS` | `3000` | Maximum answer tokens (server bounds apply). |
-| `BOOK_PATH` | `data/book.pdf` | Optional alternative path to the original book PDF. |
-
-### Notes and limits
-
-- Answers and translations from Claude may be inaccurate: always check the original source, especially formulas, statistical interpretation, and charts. AI-generated translations are **not an official published translation**.
-- The PDF is searched locally and the selected excerpts (and occasionally a screenshot of one page) are sent to the Claude API. No independent live internet or scholarly literature search is enabled. Related material outside the book is presented as **model general knowledge**, explicitly labelled as such.
-- Pages are rendered in Claude only when a question mentions a figure or table; numerical structures in plain extracted text can be imperfect.
-- The app uses Anthropic `output_config.format` structured JSON, compatible with Sonnet 5.5 (which rejects forced tool choices). The app makes billable Claude API requests. Password protection is simple shared-password gating, not institutional SSO; for a larger public launch, add server-side rate limits, user authentication and budget safeguards.
-- If the `data/book.pdf` file is missing or renamed, startup will fail: retain the supplied original file.
-- Book structure is based on the 2019 PDF's table of contents; sections and page locations are matched to **that exact edition**.
-
-## 5. Run local index tests
+After installing Python requirements and activating the virtual environment:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-They test page mapping, the author/copyright page, text extraction and representative retrieval. They do not call Anthropic. For a full application smoke test, use a real API key locally and confirm response category labels in the browser.
-
-## Refreshed interface — October 2026
-
-The interface now uses a simplified white/black layout with restrained blue accents,
-following the University of Helsinki's general colour guidance. **This is not an
-official University of Helsinki website or endorsed institutional branding.**
-
-- Open/close the **Contents / Sisällys** chapter panel using **Show contents** or
-  **Hide contents** immediately above the chat. The app remembers your preference
-  in the browser; the panel starts closed on small screens unless a preference
-  was already saved.
-- Open the book with the prominent **Read textbook / Avaa kirja** button.
-- The original author, **Kimmo Vehkalahti**, appears beneath the book title and
-  in the attribution footer.
-- Language and translation controls remain available above the message box;
-  the source-vs-outside-book classification and direct page links are unchanged.
-
-### Apply the update to an existing GitHub/Render deployment
-
-If you already have an operational copy of KyselyTutor, you can replace **only**:
-
-```
-templates/index.html
-static/style.css
-static/app.js
-```
-
-Then run these commands from the existing repository directory:
-
-```
-git add templates/index.html static/style.css static/app.js
-git commit -m "Simplify KyselyTutor interface and add contents toggle"
-git push origin main
-```
-
-Render should redeploy when it receives the new commit (if auto-deploy is enabled).
-You do not have to change the Anthropic API key, the backend code or the textbook.
-Never commit `.env`, API credentials, `.venv` or `.git` directories inside a ZIP.
-
-Original design inspiration: https://www.helsinki.fi/en/brand-book/colours
-
-## Interface update: Helsinki homepage-inspired blue accents (October 2026)
-
-The independent study interface adopts a white-dominant, black-and-blue visual style inspired by the University of Helsinki homepage and its [colour guidelines](https://www.helsinki.fi/en/brand-book/colours). It is not an official University of Helsinki website and does not use any university logo.
-
-- A visible blue rule, book-title underline, author emphasis, PDF action, and blue chapter/chat accents provide more visual emphasis while keeping the overall interface spacious.
-- The **Show contents / Hide contents** button toggles the PDF chapter navigation. The preference persists in the browser.
-- Four **one-click sample questions**, randomly selected on each visit (two Finnish and two English, from 24 prompts), demonstrate core retrieval and translation features. Each button selects its language and sends the question immediately, except that a password-protected installation first asks for the access code.
-- The interface is responsive to mobile screens.
-
-To update an existing deployment without replacing the backend or the book, copy `templates/index.html`, `static/style.css`, and `static/app.js` from the UI-only ZIP into the same paths in the project's repository, then commit and push. No new environment variables or Python packages are required.
-
-## Optional dark mode (October 2026)
-
-Use the **Dark mode** button in the header to switch from the default light
-Helsinki-inspired theme to a dark reading theme with blue highlights. In dark
-mode, the same button reads **Light mode**. The selection is remembered in
-that browser (`localStorage`); it does not affect the backend, Claude API,
-other visitors, or their preferences. The contents toggle and bilingual
-example questions remain available.
-
-To add dark mode to an existing installation, replace only
-`templates/index.html`, `static/style.css`, and `static/app.js` and push to GitHub.
-There are no new dependencies or environment variables.
-
-
-## New browser-independent textbook reader (October 2026)
-
-### Why this change was made
-
-Some browsers download an inline PDF instead of opening it, and their support
-for `#page=41` and other PDF fragment links differs. KyselyTutor therefore
-uses a **custom HTML reader** instead of a browser PDF plugin or remote PDF.js
-script. Each of the original PDF's 223 pages is rendered as a high-resolution
-**PNG on demand** by the server using the already-installed PyMuPDF library.
-The reader has no external JavaScript dependencies. This makes it usable in
-modern browsers that support standard HTML, JavaScript and PNG images.
-
-- The prominent **Read textbook / Avaa kirja** button opens `/reader`.
-- The AI's cited page links and chapter navigation now open `/reader?page=41`
-  (where the page number varies). These are ordinary shareable HTML page URLs.
-- Existing links using `/book.pdf#page=41` are supported: `/book.pdf` now serves
-  the HTML reader and its JavaScript interprets the old `#page` fragment.
-- Search the **original Finnish book** across all 223 pages, view page matches
-  and highlighted search terms, and jump directly to a result.
-- Use Previous/Next, direct page entry, zoom, fit width, and arrow keys.
-- Use **Show page text** to select/copy extracted Finnish text (the image above
-  retains the precise appearance of the original printed book).
-- The reader respects the same persisted light/dark setting and contents-panel
-  setting as the main KyselyTutor interface.
-- The original PDF has **not been altered** and is available explicitly using
-  the **Download PDF / Lataa** button at `/book/download`. If desired, the raw
-  PDF may also be viewed/downloaded at `/book/original.pdf`, but that fallback
-  still depends on the browser's PDF handling.
-
-### Apply to an existing GitHub / Render deployment
-
-This update **also changes Flask routes**. Replacing only the three former UI
-files is insufficient. Copy the following files from the reader update ZIP
-into the matching paths of your repository (keep your own `.env` untouched):
-
-```text
-app.py
-templates/index.html
-templates/reader.html    (new)
-static/app.js
-static/reader.css       (new)
-static/reader.js        (new)
-tests/test_reader.py    (new; optional test file)
-```
-
-Then in Terminal from your existing project directory:
+If Node.js is installed, you may also run the Flo voice preference test:
 
 ```bash
-git add app.py templates/index.html templates/reader.html static/app.js static/reader.css static/reader.js tests/test_reader.py
-git commit -m "Add cross-browser textbook reader and reliable page links"
-git push origin main
+node tests/test_default_flo_voice.cjs
 ```
 
-Render normally redeploys automatically if auto-deploy is enabled. No new
-Claude API settings, Python packages, or environment variables are required.
-If working locally, stop the old server and start it again using `python app.py`.
+Integration tests exercise reader routes, source links, retrieved passages, highlighting, and optional topic handling. They do **not** prove natural voice quality in each browser or verify live Claude responses. To test the full experience, make a real API request and inspect the cited PDF passages manually.
 
-### Verification
+**Reminder:** Reader source URLs may contain an extra `&b=s0` (or multiple `b=` values) for evidence highlighting. Tests should validate the **`page` query parameter**, not require the URL to equal `/reader?page=41` exactly. The current package's `tests/test_reader.py` already accounts for this.
 
-Run `python -m unittest discover -s tests -v` from the project root.
-Directly check `/reader?page=41`, `/reader?page=93`, `/reader?page=223`,
-`/book.pdf#page=116`, `/api/book/search?q=validiteetti`, and `/book/download`.
-Source text selection is an extracted-text view, not a perfect pixel-aligned
-text overlay. Image quality depends on the device and zoom factor.
+## 6. Project map
 
-No remote PDF.js/CDN, iframe, or special browser PDF capabilities are required.
+| File or directory | Role |
+|---|---|
+| `app.py` | Flask routes, Claude requests, validation and topic routing |
+| `book_search.py` | Local PDF index, page-aware retrieval and bilingual search assistance |
+| `evidence_passages.py` | Original-Finnish supporting-passage identification and selection |
+| `finland_topics.py` | Finnish statisticians, history and geography reference notes/routing |
+| `hockey.py` | Jokerit preference, Finnish NHL reference snapshot and Liiga standings lookup |
+| `data/book.pdf` | Original CC BY 4.0 Finnish textbook |
+| `templates/` | Main chat and custom reader HTML |
+| `static/` | UI styles/scripts, PDF reader and browser read-aloud controls |
+| `tests/` | Offline/backend tests plus optional JavaScript test |
+| `.env.example` | Local secrets/configuration example |
+| `render.yaml` | Render Blueprint settings |
+| `docs/OPERATIONS_AND_FEATURES.md` | Feature, API, maintenance, privacy, and troubleshooting reference |
 
+## 7. Important limitations
 
-## Rotating suggested questions (October 2026)
+- Book-based replies depend on the **retrieved** passages, which may be incomplete; check the original source if a detail matters. An inability to retrieve a passage is not proof that the book lacks it.
+- Orange highlights identify **relevant passages**, including those supporting paraphrases and translations. They need not coincide word-for-word with the answer and can miss some relevant text, particularly figures without extractable text.
+- The reader renders the PDF as PNG pages; selecting text requires the separate **Show page text** view. Raw `/book/original.pdf` may still be handled as a download by some browsers; use `/reader` for consistent viewing.
+- Voice quality and availability depend on OS/browser voices. **Flo** cannot be installed or guaranteed by the app; multilingual synthesis may vary by device.
+- History/geography/statistician answers use preloaded contextual notes with Claude, **not** live browsing. Hockey has a specific attempt to fetch **official Liiga standings**, but the standings endpoint can be unavailable; no ranking should be fabricated.
+- Information sent to Claude can include the user's question, recent chat context, retrieved book excerpts and sometimes a page image. Review Anthropic's API privacy terms and your own usage policy before publicly deploying.
 
-The welcome screen displays four clickable example prompts in one horizontal
-row, two Finnish and two English. On smaller screens the row scrolls sideways.
-The app selects from a bank of 24 and avoids repeating the prior set.
-
-## Meaning-based paragraph highlights (latest update)
-
-Textbook answer citations no longer require exact Finnish text quotation matches.
-For each retrieved excerpt, the server identifies **real paragraph passages** in
-that PDF page and gives them stable page-specific passage IDs. Claude selects
-**all relevant supporting passages** (up to eight per cited page), including
-when its answer is translated into English or paraphrased. The server accepts
-only IDs offered from the retrieved page; it sends line rectangles to the
-custom reader, which places translucent orange highlights over the original
-Finnish lines. Multiple relevant paragraphs can be highlighted on one page.
-
-If Claude omits passage IDs, a fallback selects the most relevant retrieved
-passage(s) using the original question and Finnish search terms. This is
-**related-context highlighting**, not a guarantee of exact quote-level
-attribution. Both `Show highlights` and `Hide highlights` work as before,
-with the saved preference. Search highlighting and legacy `h=` citation links
-remain supported, and outside-book answers never receive textbook highlights.
-
-All positions originate from real selectable PDF text. Complex figures or
-scanned elements without extractable text may not have paragraph highlights.
-Existing answers produced before the update might contain old-style links;
-new answers will use `b=` passage links automatically.
-
-To update an existing deployment, see `THIS_UPDATE.md`. No new Python
-packages, Claude keys, or environment variables are required.
-
-## Optional Finland personality (Finnish statisticians, history and geography)
-
-The main purpose remains answering questions grounded in Kimmo Vehkalahti's
-*Kyselytutkimuksen mittarit ja menetelmät*. For additional Finnish context,
-KyselyTutor recognises Finnish statisticians (especially Seppo Mustonen),
-Finnish history, Finnish geography, and its original Jokerit hockey side.
-These are deliberately marked with distinct purple/blue/teal/slate labels
-rather than the red unrelated-question label. The source-checked background
-notes and links are in `finland_topics.py`; no real-time web search is implied.
-Questions explicitly about the *book* still use its retrieval and citations.
-See `FINLAND_PERSONALITY_UPDATE.md` for installation and test instructions.
+For more detail, read **[docs/OPERATIONS_AND_FEATURES.md](docs/OPERATIONS_AND_FEATURES.md)**.
