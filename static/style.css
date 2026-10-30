@@ -112,6 +112,13 @@ h1 { font-family: Georgia,"Times New Roman",serif; font-size: clamp(36px,4vw,52p
 .provenance.book { color: #116337; background: #e6f6ec; border-color: #79c69b; border-left-color: #16834c; }
 .provenance.outside { color: #824300; background: #fff0d9; border-color: #e5b269; border-left-color: #d67c09; }
 .provenance.scope { color: #9b1f2b; background: #ffebed; border-color: #e8a0a6; border-left-color: #ca3541; }
+/* Finnish context subjects are welcomed as side topics; red is reserved for
+   genuinely unrelated questions. Each subject remains visibly non-textbook. */
+.provenance.hockey { color: #28435d; background: #e8f0f8; border-color: #a5bcd2; border-left-color: #537596; }
+.provenance.statisticians { color: #663090; background: #f3eafb; border-color: #c5a6df; border-left-color: #8b51b0; }
+.provenance.history { color: #185b96; background: #e7f2ff; border-color: #97c5e9; border-left-color: #267ab9; }
+.provenance.geography { color: #086e70; background: #e1f5f1; border-color: #86cfc4; border-left-color: #15968e; }
+
 .provenance-note { font-size: 14px; margin: 0 0 12px; color: var(--muted); }
 .answer-section + .answer-section { border-top: 1px solid var(--line); padding-top: 19px; margin-top: 19px; }
 .sources { border-top: 1px solid var(--line); padding-top: 15px; margin-top: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -412,6 +419,11 @@ html[data-theme="dark"] .provenance,
 html[data-theme="dark"] .provenance.book { color: #b4f4d0; background: #153c2b; border-color: #3b956a; border-left-color: #65d9a0; }
 html[data-theme="dark"] .provenance.outside { color: #ffe1ad; background: #503517; border-color: #b77f37; border-left-color: #ffc16b; }
 html[data-theme="dark"] .provenance.scope { color: #ffd1d3; background: #4d2229; border-color: #b55b68; border-left-color: #ff8992; }
+html[data-theme="dark"] .provenance.hockey { color: #c9e2f3; background: #263c4e; border-color: #6588a7; border-left-color: #a0c0e0; }
+html[data-theme="dark"] .provenance.statisticians { color: #ebcaff; background: #392346; border-color: #88649e; border-left-color: #c69ae3; }
+html[data-theme="dark"] .provenance.history { color: #c1e5ff; background: #173752; border-color: #5589ad; border-left-color: #82ccff; }
+html[data-theme="dark"] .provenance.geography { color: #b2eee0; background: #173d38; border-color: #488f85; border-left-color: #6ed4c2; }
+
 html[data-theme="dark"] .page-link { color: #b9efff; background: #23465a; border-color: #537f99; }
 html[data-theme="dark"] .page-link:hover { color: #fff; background: #2b617a; }
 html[data-theme="dark"] .composer { border-top-color: #3f7891; }

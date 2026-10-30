@@ -314,3 +314,15 @@ new answers will use `b=` passage links automatically.
 
 To update an existing deployment, see `THIS_UPDATE.md`. No new Python
 packages, Claude keys, or environment variables are required.
+
+## Optional Finland personality (Finnish statisticians, history and geography)
+
+The main purpose remains answering questions grounded in Kimmo Vehkalahti's
+*Kyselytutkimuksen mittarit ja menetelmät*. For additional Finnish context,
+KyselyTutor recognises Finnish statisticians (especially Seppo Mustonen),
+Finnish history, Finnish geography, and its original Jokerit hockey side.
+These are deliberately marked with distinct purple/blue/teal/slate labels
+rather than the red unrelated-question label. The source-checked background
+notes and links are in `finland_topics.py`; no real-time web search is implied.
+Questions explicitly about the *book* still use its retrieval and citations.
+See `FINLAND_PERSONALITY_UPDATE.md` for installation and test instructions.

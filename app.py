@@ -27,6 +27,7 @@ from book_search import BookIndex, CHAPTERS, explicit_pages, glossary_expand, se
 from evidence_passages import page_passages, offered_passages, selected_passages, overlap
 from hockey import (hockey_intent, in_finnish, favourite_answer, standings_answer,
                     HOCKEY_SYSTEM, NHL_SNAPSHOT)
+from finland_topics import finland_topic, finland_followup, FINLAND_REFERENCE, PERSONALITY_SYSTEM
 
 BASE = Path(__file__).resolve().parent
 load_dotenv(BASE / '.env')
@@ -75,6 +76,10 @@ IMPORTANT — CLASSIFY AND SEPARATE SOURCES:
   qualified GENERAL-KNOWLEDGE answer in outside_answer; do not imply it is
   from the textbook, and do not fabricate a book page reference. This includes
   new methods, software, examples or derivations not demonstrably in the source.
+- Finnish history, Finnish geography, Finnish statisticians and hockey are
+  optional interests of this tutor; do NOT mark them 'out_of_scope' merely
+  because they fall outside the book. If one reaches the textbook route,
+  mark it 'related_outside' and clearly explain the provenance.
 - Choose category 'out_of_scope' for unrelated requests such as unrelated
   current news, entertainment, vacation advice, or non-statistical tasks. Use
   outside_answer only to state that the request is outside the scope of the
@@ -163,7 +168,7 @@ def likely_english(q: str, language: str) -> bool:
         return True
     if language == 'fi':
         return False
-    return bool(re.search(r'\b(what|how|why|where|which|when|explain|translate|please|summarize|find|tell|about|does|compare|give)\b', q, re.I))
+    return bool(re.search(r'\b(who|what|how|why|where|which|when|explain|translate|please|summarize|find|tell|about|does|compare|give|describe)\b', q, re.I))
 
 
 def expand_question(question: str, language: str, client) -> str:
@@ -544,6 +549,42 @@ def ask():
             return jsonify(error='Unable to reach Claude API. Check Render logs.'), 502
         except Exception:
             app.logger.exception('Unexpected hockey response error')
+            return jsonify(error='The agent encountered an unexpected error. See Render logs.'), 500
+    # Optional Finland culture/science personality, separate from PDF evidence.
+    # Hockey is handled first above; explicit book questions retain book retrieval.
+    recent_history = get_history(body.get('history'))
+    previous_question = next((turn['content'] for turn in reversed(recent_history)
+                              if turn['role'] == 'user'), '')
+    finland_mode = (finland_topic(question) or finland_followup(question, previous_question)) \
+        if translation_mode == 'none' else None
+    if finland_mode:
+        if not os.getenv('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_API_KEY') == 'your-anthropic-api-key-here':
+            return jsonify(error='Configure ANTHROPIC_API_KEY in Render or your local .env file.'), 503
+        try:
+            client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'],
+                                         timeout=45.0, max_retries=1)
+            hint = 'Reply in Finnish.' if response_lang == 'fi' else 'Reply in English.'
+            reply = client.messages.create(
+                model=MODEL, max_tokens=min(MAX_TOKENS, 1300),
+                system=PERSONALITY_SYSTEM + '\n' + hint + '\n<reference_notes>\n' +
+                       FINLAND_REFERENCE[finland_mode] + '\n</reference_notes>',
+                messages=recent_history + [{'role': 'user', 'content': question}],
+            )
+            answer_text = ''.join(part.text for part in reply.content
+                                  if part.type == 'text').strip()
+            if not answer_text:
+                return jsonify(error='Claude did not return an answer. Try again.'), 502
+            return jsonify(category=finland_mode, book_answer='',
+                           outside_answer=answer_text[:12000], sources=[])
+        except anthropic.AuthenticationError:
+            return jsonify(error='Claude API key is invalid or revoked.'), 502
+        except anthropic.RateLimitError:
+            return jsonify(error='Claude rate limit reached. Please try again later.'), 429
+        except anthropic.APIError:
+            app.logger.exception('Finland personality Claude API error')
+            return jsonify(error='Unable to reach Claude API. Check Render logs.'), 502
+        except Exception:
+            app.logger.exception('Unexpected Finland personality error')
             return jsonify(error='The agent encountered an unexpected error. See Render logs.'), 500
     history = get_history(body.get('history'))
     last_user = next((t['content'] for t in reversed(history) if t['role'] == 'user'), '')

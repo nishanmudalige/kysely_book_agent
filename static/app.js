@@ -70,7 +70,10 @@
     mixed: {en: 'From the textbook', fi: 'Kirjasta', css: 'book'},
     related_outside: {en: 'Related — outside the textbook', fi: 'Aiheeseen liittyvä — ei kirjasta', css: 'outside'},
     out_of_scope: {en: 'Not relevant to this textbook', fi: 'Ei liity kirjan aihepiiriin', css: 'scope'},
-    hockey: {en: 'Hockey corner — outside the textbook', fi: 'Jääkiekko — oppikirjan ulkopuolelta', css: 'outside'}
+    hockey: {en: 'Hockey corner · outside the textbook', fi: 'Jääkiekko · oppikirjan ulkopuolelta', css: 'hockey'},
+    statisticians: {en: 'Finnish statisticians · context', fi: 'Suomalaiset tilastotieteilijät · taustatietoa', css: 'statisticians'},
+    history: {en: 'Finnish history · outside the textbook', fi: 'Suomen historia · oppikirjan ulkopuolelta', css: 'history'},
+    geography: {en: 'Finnish geography · outside the textbook', fi: 'Suomen maantiede · oppikirjan ulkopuolelta', css: 'geography'}
   };
 
   function isFinnish(q) {
@@ -126,7 +129,8 @@
     const result = data.category;
     if (data.book_answer) addSection(msg, 'book', data.book_answer, fi, data.sources);
     if (data.outside_answer) {
-      const type = result === 'out_of_scope' ? 'out_of_scope' : (result === 'hockey' ? 'hockey' : 'related_outside');
+      const type = ['out_of_scope', 'hockey', 'statisticians', 'history', 'geography'].includes(result)
+        ? result : 'related_outside';
       addSection(msg, type, data.outside_answer, fi, []);
     }
     if (data.sources && data.sources.length) {
