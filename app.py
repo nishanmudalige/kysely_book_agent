@@ -25,6 +25,8 @@ from flask import Flask, abort, jsonify, render_template, request, send_file
 
 from book_search import BookIndex, CHAPTERS, explicit_pages, glossary_expand, section_at
 from evidence_passages import page_passages, offered_passages, selected_passages, overlap
+from hockey import (hockey_intent, in_finnish, favourite_answer, standings_answer,
+                    HOCKEY_SYSTEM, NHL_SNAPSHOT)
 
 BASE = Path(__file__).resolve().parent
 load_dotenv(BASE / '.env')
@@ -54,6 +56,8 @@ Kimmo Vehkalahti or the University of Helsinki.
 
 SYSTEM_PROMPT = """You are KyselyTutor, an accurate, engaging, bilingual Finnish/English
 study guide to Kimmo Vehkalahti's book *Kyselytutkimuksen mittarit ja menetelmät*.
+Be friendly, approachable and occasionally lightly playful, but always precise.
+Don't insert hockey jokes into academic answers unless relevant to the question.
 The primary authoritative source is the Finnish ORIGINAL book excerpt supplied
 for each question, NOT your background knowledge.
 
@@ -502,6 +506,45 @@ def ask():
         translation_mode = 'none'
     if translation_mode != 'none':
         response_lang = translation_mode
+    # Small, explicitly labelled hockey exception. Do not search the statistics
+    # textbook or invent PDF citations for unrelated sporting questions.
+    hockey_mode = hockey_intent(question) if translation_mode == 'none' else None
+    if hockey_mode:
+        fi = in_finnish(question, language)
+        if hockey_mode == 'favourite':
+            return jsonify(category='hockey', book_answer='',
+                           outside_answer=favourite_answer(fi), sources=[])
+        if hockey_mode == 'standings':
+            return jsonify(category='hockey', book_answer='',
+                           outside_answer=standings_answer(question, fi), sources=[])
+        if not os.getenv('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_API_KEY') == 'your-anthropic-api-key-here':
+            return jsonify(error='Configure ANTHROPIC_API_KEY in Render or your local .env file.'), 503
+        try:
+            client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'],
+                                         timeout=45.0, max_retries=1)
+            hint = 'Reply in Finnish.' if fi else 'Reply in English.'
+            reply = client.messages.create(
+                model=MODEL, max_tokens=min(MAX_TOKENS, 900),
+                system=HOCKEY_SYSTEM + '\n' + NHL_SNAPSHOT + '\n' + hint,
+                messages=get_history(body.get('history')) +
+                         [{'role': 'user', 'content': question}],
+            )
+            answer_text = ''.join(part.text for part in reply.content
+                                  if part.type == 'text').strip()
+            if not answer_text:
+                return jsonify(error='Claude did not return a hockey answer. Try again.'), 502
+            return jsonify(category='hockey', book_answer='',
+                           outside_answer=answer_text[:9000], sources=[])
+        except anthropic.AuthenticationError:
+            return jsonify(error='Claude API key is invalid or revoked.'), 502
+        except anthropic.RateLimitError:
+            return jsonify(error='Claude rate limit reached. Please try again later.'), 429
+        except anthropic.APIError:
+            app.logger.exception('Hockey request: Claude API error')
+            return jsonify(error='Unable to reach Claude API. Check Render logs.'), 502
+        except Exception:
+            app.logger.exception('Unexpected hockey response error')
+            return jsonify(error='The agent encountered an unexpected error. See Render logs.'), 500
     history = get_history(body.get('history'))
     last_user = next((t['content'] for t in reversed(history) if t['role'] == 'user'), '')
     pinned = explicit_pages(question, INDEX.page_count)
